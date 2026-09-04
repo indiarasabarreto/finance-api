@@ -1,8 +1,10 @@
 import io
+import os
 import pandas as pd
 from pathlib import Path
 from collections import defaultdict
-from fastapi import FastAPI, Depends, UploadFile, File, HTTPException, Request, Form
+from datetime import datetime
+from fastapi import FastAPI, Depends, UploadFile, File, HTTPException, Request, Form, Cookie, Response
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -18,6 +20,9 @@ APP_DIR = Path(__file__).resolve().parent
 app = FastAPI(title="Finance API - Gestão de Cantina, Loja e Mensalidades")
 templates = Jinja2Templates(directory=APP_DIR / "templates")
 
+# Senha de Acesso para a Aba de Mensalidades (Padrão: 9090)
+MONTHLY_FEES_PIN = os.getenv("MONTHLY_FEES_PIN", "9090")
+
 MEMBERS_LIST = [
     "Eliana", "Kelvin", "Igor", "Lívia", 
     "Nicole", "Indiara", "Jhon", "Bruna", "Talles"
@@ -28,11 +33,18 @@ def health_check():
     return {"status": "online"}
 
 @app.get("/", response_class=HTMLResponse)
-def dashboard(request: Request, db: Session = Depends(get_db)):
+def dashboard(
+    request: Request, 
+    fees_auth: str | None = Cookie(default=None), 
+    db: Session = Depends(get_db)
+):
+    is_fees_authorized = (fees_auth == "authorized")
+
     raw_consumptions = db.query(EventConsumption).all()
     batches = db.query(ImportBatch).order_by(ImportBatch.created_at.desc()).all()
     monthly_fees = db.query(MonthlyFee).order_by(MonthlyFee.month_year.desc()).all()
     
+    # --- 1. CANTINA & LOJA ---
     cantina_total_geral = 0.0
     cantina_total_pago = 0.0
     cantina_total_pendente = 0.0
@@ -63,7 +75,6 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
             "month_year": batch_month
         })
 
-    # Agrupa consumos por pasta (Mês/Ano)
     folders = defaultdict(list)
     for c in formatted_consumptions:
         folders[c["month_year"]].append(c)
@@ -78,9 +89,10 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
             "total_geral": f_total,
             "total_pago": f_pago,
             "total_pendente": f_pendente,
-            "consumptions": consumptions_list  # Alterado de 'items' para 'consumptions'
+            "consumptions": consumptions_list
         })
 
+    # --- 2. MENSALIDADES ---
     fees_total_geral = 0.0
     fees_total_pago = 0.0
     fees_total_pendente = 0.0
@@ -103,7 +115,6 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
             "status": status_val
         })
 
-    # Agrupa mensalidades por Mês/Ano
     formatted_fee_folders = []
     for month_year, fee_list in fees_by_month.items():
         f_total = sum(i["amount"] for i in fee_list)
@@ -114,7 +125,7 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
             "total_geral": f_total,
             "total_pago": f_pago,
             "total_pendente": f_pendente,
-            "fees": fee_list  # Alterado de 'items' para 'fees'
+            "fees": fee_list
         })
 
     formatted_batches = [
@@ -142,16 +153,31 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
             "fees_total_geral": fees_total_geral,
             "fees_total_pago": fees_total_pago,
             "fees_total_pendente": fees_total_pendente,
+            "is_fees_authorized": is_fees_authorized
         }
     )
 
-# --- LANÇAMENTO DIRETO AO VIVO ---
+# --- AUTENTICAÇÃO MENSALIDADES ---
 
-from datetime import datetime
+@app.post("/monthly-fees/login")
+def monthly_fees_login(pin: str = Form(...)):
+    if pin == MONTHLY_FEES_PIN:
+        response = RedirectResponse(url="/#pills-fees", status_code=303)
+        response.set_cookie(key="fees_auth", value="authorized", max_age=2592000, httponly=True)
+        return response
+    return RedirectResponse(url="/#pills-fees", status_code=303)
+
+@app.post("/monthly-fees/logout")
+def monthly_fees_logout(response: Response):
+    response = RedirectResponse(url="/#pills-fees", status_code=303)
+    response.delete_cookie("fees_auth")
+    return response
+
+# --- LANÇAMENTO DIRETO AO VIVO ---
 
 @app.post("/consumptions/direct-add")
 def add_direct_consumption(
-    event_date: str = Form(...),  # Espera 'YYYY-MM-DD' do input date
+    event_date: str = Form(...),
     person_name: str = Form(...),
     group: str = Form(...),
     category: str = Form(...),
@@ -160,7 +186,6 @@ def add_direct_consumption(
     status: str = Form(...),
     db: Session = Depends(get_db)
 ):
-    # Converte '2026-09-04' para '04/09/2026' (data do dia) e '09/2026' (pasta do mês)
     try:
         date_obj = datetime.strptime(event_date, "%Y-%m-%d")
         full_date_str = date_obj.strftime("%d/%m/%Y")
@@ -169,7 +194,6 @@ def add_direct_consumption(
         full_date_str = event_date
         month_year_str = event_date
 
-    # Localiza ou cria a pasta do mês correspondente
     batch = db.query(ImportBatch).filter(ImportBatch.month_year == month_year_str).first()
     if not batch:
         batch = ImportBatch(
@@ -184,7 +208,6 @@ def add_direct_consumption(
     cat_enum = CategoryType.LOJA if category == "Loja" else CategoryType.CANTINA
     st_enum = PaymentStatus.PAID if status == "PAGO" else PaymentStatus.PENDING
 
-    # Formata a descrição para incluir a data do dia nos itens se desejar, ou grava os itens diretamente
     item_description = f"[{full_date_str}] {raw_items}"
 
     consumption = EventConsumption(
