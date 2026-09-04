@@ -180,66 +180,109 @@
                     });
                 </script>
 
-                <!-- Formulário de Upload de Planilha -->
-                <div class="card border-0 shadow-sm p-4 mb-4 no-print">
-                    <h5 class="card-title fw-bold mb-3"><i class="bi bi-file-earmark-excel text-primary me-2"></i>Ou
-                        Importar Planilha Fechada (Excel)</h5>
-                    <form action="/upload-html" method="post" enctype="multipart/form-data" class="row g-2">
-                        <div class="col-md-3">
-                            <input type="text" name="month_year" class="form-control"
-                                placeholder="Mês/Ano (Ex: 09/2026)" required>
-                        </div>
-                        <div class="col-md-4">
-                            <input type="text" name="event_name" class="form-control"
-                                placeholder="Nome do Evento (Opcional)">
-                        </div>
-                        <div class="col-md-3">
-                            <input type="file" name="file" accept=".xlsx, .xlsm" class="form-control" required>
-                        </div>
-                        <div class="col-md-2">
-                            <button type="submit" class="btn btn-primary fw-bold w-100">Criar Pasta</button>
-                        </div>
-                    </form>
+                <!-- Formulário de Comanda Ao Vivo com Atalhos de Produtos -->
+                <div class="card border-0 shadow-sm p-4 mb-4 no-print border-start border-4 border-success">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title fw-bold text-success m-0">
+                            <i class="bi bi-plus-circle me-2"></i>Comanda Ao Vivo / Frente de Caixa
+                        </h5>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearLiveForm()">
+                            <i class="bi bi-eraser me-1"></i> Limpar Formulário
+                        </button>
+                    </div>
 
-                    {% if batches %}
-                    <hr>
-                    <div class="accordion" id="batchAccordion">
-                        <div class="accordion-item border-0">
-                            <h2 class="accordion-header">
-                                <button
-                                    class="accordion-button collapsed px-0 bg-transparent text-secondary fw-bold shadow-none"
-                                    type="button" data-bs-toggle="collapse" data-bs-target="#collapseBatches">
-                                    <i class="bi bi-clock-history me-2"></i> Histórico de Planilhas Importadas ({{
-                                    batches|length }})
-                                </button>
-                            </h2>
-                            <div id="collapseBatches" class="accordion-collapse collapse"
-                                data-bs-parent="#batchAccordion">
-                                <div class="accordion-body px-0 pt-2">
-                                    <ul class="list-group list-group-flush">
-                                        {% for b in batches %}
-                                        <li
-                                            class="list-group-item d-flex justify-content-between align-items-center bg-transparent px-0">
-                                            <div>
-                                                <span class="badge bg-primary me-2">{{ b.month_year }}</span>
-                                                <strong class="text-dark">{{ b.event_name or b.filename }}</strong>
-                                                <small class="text-muted ms-2">({{ b.filename }}) — {{ b.items_count }}
-                                                    registros</small>
-                                            </div>
-                                            <form action="/batches/{{ b.id }}/delete" method="post"
-                                                onsubmit="return confirm('Remover esta planilha e todos os seus lançamentos?')">
-                                                <button type="submit" class="btn btn-sm btn-outline-danger">
-                                                    <i class="bi bi-trash"></i> Apagar
-                                                </button>
-                                            </form>
-                                        </li>
-                                        {% endfor %}
-                                    </ul>
-                                </div>
-                            </div>
+                    <!-- PAINEL DE PRODUTOS RÁPIDOS (Quick Select) -->
+                    <div class="mb-3 p-3 bg-light rounded-3 border">
+                        <small class="text-muted fw-bold d-block mb-2"><i
+                                class="bi bi-lightning-charge-fill text-warning me-1"></i> Clique nos itens para
+                            adicionar ao pedido:</small>
+                        <div class="d-flex flex-wrap gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-dark fw-semibold bg-white"
+                                onclick="addItemQuick('Torta de Atum', 12.00)">
+                                Torta de Atum <span class="badge bg-success ms-1">R$ 12</span>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-dark fw-semibold bg-white"
+                                onclick="addItemQuick('Torta de Frango', 12.00)">
+                                Torta de Frango <span class="badge bg-success ms-1">R$ 12</span>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-dark fw-semibold bg-white"
+                                onclick="addItemQuick('Empada', 9.00)">
+                                Empada <span class="badge bg-success ms-1">R$ 9</span>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-dark fw-semibold bg-white"
+                                onclick="addItemQuick('Bolo', 5.00)">
+                                Bolo <span class="badge bg-success ms-1">R$ 5</span>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-dark fw-semibold bg-white"
+                                onclick="addItemQuick('Pudim', 5.00)">
+                                Pudim <span class="badge bg-success ms-1">R$ 5</span>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-dark fw-semibold bg-white"
+                                onclick="addItemQuick('Mousse', 5.00)">
+                                Mousse <span class="badge bg-success ms-1">R$ 5</span>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-dark fw-semibold bg-white"
+                                onclick="addItemQuick('Refrigerante', 5.00)">
+                                Refrigerante <span class="badge bg-success ms-1">R$ 5</span>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-dark fw-semibold bg-white"
+                                onclick="addItemQuick('Café', 5.00)">
+                                Café <span class="badge bg-success ms-1">R$ 5</span>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-dark fw-semibold bg-white"
+                                onclick="addItemQuick('Suco', 3.00)">
+                                Suco <span class="badge bg-success ms-1">R$ 3</span>
+                            </button>
                         </div>
                     </div>
-                    {% endif %}
+
+                    <form action="/consumptions/direct-add" method="post" class="row g-2">
+                        <div class="col-md-2">
+                            <label class="form-label small text-muted fw-bold mb-1">Data do Dia</label>
+                            <input type="date" id="event_date_input" name="event_date" class="form-control" required>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small text-muted fw-bold mb-1">Nome Cliente</label>
+                            <input type="text" id="live_person_name" name="person_name" class="form-control"
+                                placeholder="Nome do cliente" required>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small text-muted fw-bold mb-1">Origem</label>
+                            <select name="category" class="form-select">
+                                <option value="Cantina">Cantina</option>
+                                <option value="Loja">Loja</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small text-muted fw-bold mb-1">Grupo</label>
+                            <select name="group" class="form-select">
+                                <option value="Filho da Casa">Filho da Casa</option>
+                                <option value="Visitante">Visitante</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small text-muted fw-bold mb-1">Itens Consumidos</label>
+                            <input type="text" id="live_raw_items" name="raw_items" class="form-control"
+                                placeholder="Clique acima ou digite" required>
+                        </div>
+                        <div class="col-md-1">
+                            <label class="form-label small text-muted fw-bold mb-1">Valor (R$)</label>
+                            <input type="number" step="0.01" id="live_total_amount" name="total_amount"
+                                class="form-control" placeholder="0.00" required>
+                        </div>
+                        <div class="col-md-1">
+                            <label class="form-label small text-muted fw-bold mb-1">Situação</label>
+                            <select name="status" class="form-select">
+                                <option value="PAGO">PAGO</option>
+                                <option value="PENDENTE">PENDENTE</option>
+                            </select>
+                        </div>
+                        <div class="col-12 mt-3 text-end">
+                            <button type="submit" class="btn btn-success fw-bold px-4">
+                                <i class="bi bi-check2-circle me-1"></i> Lançar na Comanda
+                            </button>
+                        </div>
+                    </form>
                 </div>
 
                 <!-- Pastas da Cantina -->
@@ -571,6 +614,42 @@
                     var tab = new bootstrap.Tab(triggerEl);
                     tab.show();
                 }
+            }
+        });
+    </script>
+
+    <script>
+        // Função para adicionar itens rápidos e somar o valor
+        function addItemQuick(itemName, price) {
+            var itemsInput = document.getElementById('live_raw_items');
+            var amountInput = document.getElementById('live_total_amount');
+
+            // Adiciona o nome do item
+            if (itemsInput.value.trim() === '') {
+                itemsInput.value = itemName;
+            } else {
+                itemsInput.value += ' + ' + itemName;
+            }
+
+            // Soma o valor
+            var currentAmount = parseFloat(amountInput.value) || 0.0;
+            var newAmount = currentAmount + price;
+            amountInput.value = newAmount.toFixed(2);
+        }
+
+        // Função para limpar o formulário de comanda ao vivo
+        function clearLiveForm() {
+            document.getElementById('live_raw_items').value = '';
+            document.getElementById('live_total_amount').value = '';
+            document.getElementById('live_person_name').value = '';
+        }
+
+        // Preenche a data de hoje por padrão
+        document.addEventListener("DOMContentLoaded", function () {
+            var dateInput = document.getElementById('event_date_input');
+            if (dateInput) {
+                var today = new Date().toISOString().split('T')[0];
+                dateInput.value = today;
             }
         });
     </script>
