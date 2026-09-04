@@ -80,10 +80,14 @@ def dashboard(
         folders[c["month_year"]].append(c)
 
     formatted_folders = []
+    cantina_paid_by_month = defaultdict(float)
+
     for month_year, consumptions_list in folders.items():
         f_total = sum(i["total_amount"] for i in consumptions_list)
         f_pago = sum(i["total_amount"] for i in consumptions_list if i["status"] == "PAGO")
         f_pendente = sum(i["total_amount"] for i in consumptions_list if i["status"] == "PENDENTE")
+        cantina_paid_by_month[month_year] = f_pago
+
         formatted_folders.append({
             "month_year": month_year,
             "total_geral": f_total,
@@ -116,16 +120,34 @@ def dashboard(
         })
 
     formatted_fee_folders = []
+    fees_paid_by_month = defaultdict(float)
+
     for month_year, fee_list in fees_by_month.items():
         f_total = sum(i["amount"] for i in fee_list)
         f_pago = sum(i["amount"] for i in fee_list if i["status"] == "PAGO")
         f_pendente = sum(i["amount"] for i in fee_list if i["status"] == "PENDENTE")
+        fees_paid_by_month[month_year] = f_pago
+
         formatted_fee_folders.append({
             "month_year": month_year,
             "total_geral": f_total,
             "total_pago": f_pago,
             "total_pendente": f_pendente,
             "fees": fee_list
+        })
+
+    # --- 3. CONSOLIDAÇÃO MENSAL GERAL ---
+    all_months = sorted(list(set(list(cantina_paid_by_month.keys()) + list(fees_paid_by_month.keys()))), reverse=True)
+    monthly_summary = []
+
+    for m in all_months:
+        c_pago = cantina_paid_by_month.get(m, 0.0)
+        f_pago = fees_paid_by_month.get(m, 0.0)
+        monthly_summary.append({
+            "month_year": m,
+            "cantina_pago": c_pago,
+            "fees_pago": f_pago,
+            "total_mes": c_pago + f_pago
         })
 
     formatted_batches = [
@@ -153,6 +175,7 @@ def dashboard(
             "fees_total_geral": fees_total_geral,
             "fees_total_pago": fees_total_pago,
             "fees_total_pendente": fees_total_pendente,
+            "monthly_summary": monthly_summary,
             "is_fees_authorized": is_fees_authorized
         }
     )
@@ -169,7 +192,7 @@ def monthly_fees_login(pin: str = Form(...)):
 
 @app.post("/monthly-fees/logout")
 def monthly_fees_logout(response: Response):
-    response = RedirectResponse(url="/#pills-fees", status_code=303)
+    response = RedirectResponse(url="/#pills-cantina", status_code=303)
     response.delete_cookie("fees_auth")
     return response
 

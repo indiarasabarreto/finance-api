@@ -45,7 +45,7 @@
             </div>
         </div>
 
-        <!-- SELETOR DE MÓDULOS (3 ABAS 100% SEPARADAS) -->
+        <!-- SELETOR DE MÓDULOS -->
         <ul class="nav nav-pills mb-4 no-print" id="pills-tab" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active fw-bold me-2" id="pills-cantina-tab" data-bs-toggle="pill" data-bs-target="#pills-cantina" type="button" role="tab">
@@ -66,12 +66,9 @@
 
         <div class="tab-content" id="pills-tabContent">
             
-            <!-- ========================================================== -->
-            <!-- ABA 1: CANTINA E LOJA (CAIXA / COMANDA / PLANILHAS) -->
-            <!-- ========================================================== -->
+            <!-- ABA 1: CANTINA E LOJA -->
             <div class="tab-pane fade show active" id="pills-cantina" role="tabpanel">
                 
-                <!-- Cards de Resumo Exclusivos -->
                 <div class="row g-3 mb-4">
                     <div class="col-md-4">
                         <div class="card border-0 shadow-sm bg-primary text-white p-3">
@@ -104,7 +101,6 @@
                         </button>
                     </div>
 
-                    <!-- Atalhos de Produtos -->
                     <div class="mb-3 p-3 bg-light rounded-3 border">
                         <small class="text-muted fw-bold d-block mb-2"><i class="bi bi-lightning-charge-fill text-warning me-1"></i> Clique nos itens para adicionar ao pedido:</small>
                         <div class="d-flex flex-wrap gap-2">
@@ -282,7 +278,7 @@
                                             <tr>
                                                 <td class="fw-bold">{{ item.person_name }}</td>
                                                 <td>
-                                                    <span class="badge {% if item.category == 'Loja' %}bg-purple text-white style="background-color:#6f42c1;"{% else %}bg-dark{% endif %}">
+                                                    <span class="badge {% if item.category == 'Loja' %}bg-purple text-white{% else %}bg-dark{% endif %}" {% if item.category == 'Loja' %}style="background-color:#6f42c1;"{% endif %}>
                                                         {{ item.category }}
                                                     </span>
                                                 </td>
@@ -307,7 +303,7 @@
                                                             </button>
                                                         </form>
                                                         {% endif %}
-                                                        <button type="button" class="btn btn-outline-primary" data-item='{{ item|tojson|forceescape }}' onclick="openEditModal(JSON.parse(this.dataset.item))" title="Editar">
+                                                        <button type="button" class="btn btn-outline-primary" data-item='{{ item|tojson|e }}' onclick="openEditModal(JSON.parse(this.dataset.item))" title="Editar">
                                                             <i class="bi bi-pencil"></i>
                                                         </button>
                                                         <form action="/consumptions/{{ item.id }}/delete" method="post" class="d-inline" onsubmit="return confirm('Excluir este registro?')">
@@ -330,9 +326,7 @@
                 {% endif %}
             </div>
 
-            <!-- ========================================================== -->
-            <!-- ABA 2: MENSALIDADES (ÁREA RESTRITA POR SENHA) -->
-            <!-- ========================================================== -->
+            <!-- ABA 2: MENSALIDADES (ÁREA RESTRITA) -->
             <div class="tab-pane fade" id="pills-fees" role="tabpanel">
                 {% if not is_fees_authorized %}
                 <!-- Tela de Login da Aba de Mensalidades -->
@@ -364,9 +358,12 @@
                 <!-- Conteúdo Liberado -->
                 <div class="d-flex justify-content-between align-items-center mb-3 no-print">
                     <div>
-                        <button type="button" class="btn btn-sm btn-outline-primary fw-bold me-2" onclick="goToCantinaTab()">
-                            <i class="bi bi-arrow-left me-1"></i> Voltar para Cantina & Loja
-                        </button>
+                        <!-- BOTÃO VOLTAR QUE BLOQUEIA / FAZ LOGOUT DA ÁREA AUTOMATICAMENTE -->
+                        <form action="/monthly-fees/logout" method="post" class="d-inline">
+                            <button type="submit" class="btn btn-sm btn-outline-primary fw-bold me-2">
+                                <i class="bi bi-arrow-left me-1"></i> Voltar e Bloquear Área
+                            </button>
+                        </form>
                         <span class="badge bg-success px-3 py-2 fs-6"><i class="bi bi-shield-check me-1"></i> Acesso Gestor Liberado</span>
                     </div>
                     <form action="/monthly-fees/logout" method="post">
@@ -492,9 +489,7 @@
                 {% endif %}
             </div>
 
-            <!-- ========================================================== -->
-            <!-- ABA 3: RESUMO DE VENDAS MENSAIS (QUADRO EXECUTIVO ISOLADO) -->
-            <!-- ========================================================== -->
+            <!-- ABA 3: RESUMO DE VENDAS MENSAIS -->
             <div class="tab-pane fade" id="pills-summary" role="tabpanel">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h4 class="fw-bold text-dark m-0"><i class="bi bi-graph-up-arrow text-primary me-2"></i>Resumo Executivo Mês a Mês</h4>
