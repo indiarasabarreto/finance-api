@@ -1,13 +1,12 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestão Financeira - Terreiro</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-
+    
     <style>
         .nav-pills .nav-link {
             font-size: 1.1rem;
@@ -16,48 +15,21 @@
             color: #6c757d;
             background-color: #e9ecef;
         }
-
         .nav-pills .nav-link.active {
             background-color: #0d6efd;
             color: #fff;
         }
-
         @media print {
-
-            .no-print,
-            form,
-            .btn,
-            .accordion,
-            .input-group,
-            select,
-            .nav-pills {
+            .no-print, form, .btn, .accordion, .input-group, select, .nav-pills {
                 display: none !important;
             }
-
-            body {
-                background-color: #fff !important;
-                font-size: 12pt;
-            }
-
-            .container {
-                max-width: 100% !important;
-                padding: 0 !important;
-            }
-
-            .card {
-                border: none !important;
-                box-shadow: none !important;
-            }
-
-            .badge {
-                border: 1px solid #000;
-                color: #000 !important;
-                background-color: transparent !important;
-            }
+            body { background-color: #fff !important; font-size: 12pt; }
+            .container { max-width: 100% !important; padding: 0 !important; }
+            .card { border: none !important; box-shadow: none !important; }
+            .badge { border: 1px solid #000; color: #000 !important; background-color: transparent !important; }
         }
     </style>
 </head>
-
 <body class="bg-light">
     <div class="container py-4">
         <!-- CABEÇALHO -->
@@ -76,24 +48,22 @@
         <!-- SELETOR DE MÓDULOS -->
         <ul class="nav nav-pills mb-4 no-print" id="pills-tab" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active fw-bold me-2" id="pills-cantina-tab" data-bs-toggle="pill"
-                    data-bs-target="#pills-cantina" type="button" role="tab">
+                <button class="nav-link active fw-bold me-2" id="pills-cantina-tab" data-bs-toggle="pill" data-bs-target="#pills-cantina" type="button" role="tab">
                     <i class="bi bi-shop me-2"></i> Cantina e Loja
                 </button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link fw-bold" id="pills-fees-tab" data-bs-toggle="pill" data-bs-target="#pills-fees"
-                    type="button" role="tab">
+                <button class="nav-link fw-bold" id="pills-fees-tab" data-bs-toggle="pill" data-bs-target="#pills-fees" type="button" role="tab">
                     <i class="bi bi-people-fill me-2"></i> Mensalidades (R$ 90,00)
                 </button>
             </li>
         </ul>
 
         <div class="tab-content" id="pills-tabContent">
-
+            
             <!-- CANTINA E LOJA -->
             <div class="tab-pane fade show active" id="pills-cantina" role="tabpanel">
-
+                
                 <!-- Cards de Resumo -->
                 <div class="row g-3 mb-4">
                     <div class="col-md-4">
@@ -116,71 +86,7 @@
                     </div>
                 </div>
 
-                <!-- Formulário de Comanda Ao Vivo -->
-                <div class="card border-0 shadow-sm p-4 mb-4 no-print border-start border-4 border-success">
-                    <h5 class="card-title fw-bold mb-3 text-success">
-                        <i class="bi bi-plus-circle me-2"></i>Comanda Ao Vivo / Frente de Caixa (Lançar Pedido)
-                    </h5>
-                    <form action="/consumptions/direct-add" method="post" class="row g-2">
-                        <div class="col-md-2">
-                            <label class="form-label small text-muted fw-bold mb-1">Data do Dia</label>
-                            <input type="date" id="event_date_input" name="event_date" class="form-control" required>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label small text-muted fw-bold mb-1">Nome Cliente</label>
-                            <input type="text" name="person_name" class="form-control" placeholder="Nome" required>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label small text-muted fw-bold mb-1">Origem</label>
-                            <select name="category" class="form-select">
-                                <option value="Cantina">Cantina</option>
-                                <option value="Loja">Loja</option>
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label small text-muted fw-bold mb-1">Grupo</label>
-                            <select name="group" class="form-select">
-                                <option value="Filho da Casa">Filho da Casa</option>
-                                <option value="Visitante">Visitante</option>
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label small text-muted fw-bold mb-1">Itens Consumidos</label>
-                            <input type="text" name="raw_items" class="form-control" placeholder="Ex: 2 Sucos + Torta"
-                                required>
-                        </div>
-                        <div class="col-md-1">
-                            <label class="form-label small text-muted fw-bold mb-1">Valor (R$)</label>
-                            <input type="number" step="0.01" name="total_amount" class="form-control" placeholder="0.00"
-                                required>
-                        </div>
-                        <div class="col-md-1">
-                            <label class="form-label small text-muted fw-bold mb-1">Situação</label>
-                            <select name="status" class="form-select">
-                                <option value="PAGO">PAGO</option>
-                                <option value="PENDENTE">PENDENTE</option>
-                            </select>
-                        </div>
-                        <div class="col-12 mt-3 text-end">
-                            <button type="submit" class="btn btn-success fw-bold px-4">
-                                <i class="bi bi-check2-circle me-1"></i> Lançar na Comanda
-                            </button>
-                        </div>
-                    </form>
-                </div>
-
-                <!-- Script no final do arquivo para preencher automaticamente com a data de hoje -->
-                <script>
-                    document.addEventListener("DOMContentLoaded", function () {
-                        var dateInput = document.getElementById('event_date_input');
-                        if (dateInput) {
-                            var today = new Date().toISOString().split('T')[0];
-                            dateInput.value = today;
-                        }
-                    });
-                </script>
-
-                <!-- Formulário de Comanda Ao Vivo com Atalhos de Produtos -->
+                <!-- Formulário Único de Comanda Ao Vivo -->
                 <div class="card border-0 shadow-sm p-4 mb-4 no-print border-start border-4 border-success">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h5 class="card-title fw-bold text-success m-0">
@@ -191,46 +97,35 @@
                         </button>
                     </div>
 
-                    <!-- PAINEL DE PRODUTOS RÁPIDOS (Quick Select) -->
+                    <!-- Atalhos de Produtos -->
                     <div class="mb-3 p-3 bg-light rounded-3 border">
-                        <small class="text-muted fw-bold d-block mb-2"><i
-                                class="bi bi-lightning-charge-fill text-warning me-1"></i> Clique nos itens para
-                            adicionar ao pedido:</small>
+                        <small class="text-muted fw-bold d-block mb-2"><i class="bi bi-lightning-charge-fill text-warning me-1"></i> Clique nos itens para adicionar ao pedido:</small>
                         <div class="d-flex flex-wrap gap-2">
-                            <button type="button" class="btn btn-sm btn-outline-dark fw-semibold bg-white"
-                                onclick="addItemQuick('Torta de Atum', 12.00)">
+                            <button type="button" class="btn btn-sm btn-outline-dark fw-semibold bg-white" onclick="addItemQuick('Torta de Atum', 12.00)">
                                 Torta de Atum <span class="badge bg-success ms-1">R$ 12</span>
                             </button>
-                            <button type="button" class="btn btn-sm btn-outline-dark fw-semibold bg-white"
-                                onclick="addItemQuick('Torta de Frango', 12.00)">
+                            <button type="button" class="btn btn-sm btn-outline-dark fw-semibold bg-white" onclick="addItemQuick('Torta de Frango', 12.00)">
                                 Torta de Frango <span class="badge bg-success ms-1">R$ 12</span>
                             </button>
-                            <button type="button" class="btn btn-sm btn-outline-dark fw-semibold bg-white"
-                                onclick="addItemQuick('Empada', 9.00)">
+                            <button type="button" class="btn btn-sm btn-outline-dark fw-semibold bg-white" onclick="addItemQuick('Empada', 9.00)">
                                 Empada <span class="badge bg-success ms-1">R$ 9</span>
                             </button>
-                            <button type="button" class="btn btn-sm btn-outline-dark fw-semibold bg-white"
-                                onclick="addItemQuick('Bolo', 5.00)">
+                            <button type="button" class="btn btn-sm btn-outline-dark fw-semibold bg-white" onclick="addItemQuick('Bolo', 5.00)">
                                 Bolo <span class="badge bg-success ms-1">R$ 5</span>
                             </button>
-                            <button type="button" class="btn btn-sm btn-outline-dark fw-semibold bg-white"
-                                onclick="addItemQuick('Pudim', 5.00)">
+                            <button type="button" class="btn btn-sm btn-outline-dark fw-semibold bg-white" onclick="addItemQuick('Pudim', 5.00)">
                                 Pudim <span class="badge bg-success ms-1">R$ 5</span>
                             </button>
-                            <button type="button" class="btn btn-sm btn-outline-dark fw-semibold bg-white"
-                                onclick="addItemQuick('Mousse', 5.00)">
+                            <button type="button" class="btn btn-sm btn-outline-dark fw-semibold bg-white" onclick="addItemQuick('Mousse', 5.00)">
                                 Mousse <span class="badge bg-success ms-1">R$ 5</span>
                             </button>
-                            <button type="button" class="btn btn-sm btn-outline-dark fw-semibold bg-white"
-                                onclick="addItemQuick('Refrigerante', 5.00)">
+                            <button type="button" class="btn btn-sm btn-outline-dark fw-semibold bg-white" onclick="addItemQuick('Refrigerante', 5.00)">
                                 Refrigerante <span class="badge bg-success ms-1">R$ 5</span>
                             </button>
-                            <button type="button" class="btn btn-sm btn-outline-dark fw-semibold bg-white"
-                                onclick="addItemQuick('Café', 5.00)">
+                            <button type="button" class="btn btn-sm btn-outline-dark fw-semibold bg-white" onclick="addItemQuick('Café', 5.00)">
                                 Café <span class="badge bg-success ms-1">R$ 5</span>
                             </button>
-                            <button type="button" class="btn btn-sm btn-outline-dark fw-semibold bg-white"
-                                onclick="addItemQuick('Suco', 3.00)">
+                            <button type="button" class="btn btn-sm btn-outline-dark fw-semibold bg-white" onclick="addItemQuick('Suco', 3.00)">
                                 Suco <span class="badge bg-success ms-1">R$ 3</span>
                             </button>
                         </div>
@@ -243,8 +138,7 @@
                         </div>
                         <div class="col-md-2">
                             <label class="form-label small text-muted fw-bold mb-1">Nome Cliente</label>
-                            <input type="text" id="live_person_name" name="person_name" class="form-control"
-                                placeholder="Nome do cliente" required>
+                            <input type="text" id="live_person_name" name="person_name" class="form-control" placeholder="Nome do cliente" required>
                         </div>
                         <div class="col-md-2">
                             <label class="form-label small text-muted fw-bold mb-1">Origem</label>
@@ -262,13 +156,11 @@
                         </div>
                         <div class="col-md-2">
                             <label class="form-label small text-muted fw-bold mb-1">Itens Consumidos</label>
-                            <input type="text" id="live_raw_items" name="raw_items" class="form-control"
-                                placeholder="Clique acima ou digite" required>
+                            <input type="text" id="live_raw_items" name="raw_items" class="form-control" placeholder="Clique acima ou digite" required>
                         </div>
                         <div class="col-md-1">
                             <label class="form-label small text-muted fw-bold mb-1">Valor (R$)</label>
-                            <input type="number" step="0.01" id="live_total_amount" name="total_amount"
-                                class="form-control" placeholder="0.00" required>
+                            <input type="number" step="0.01" id="live_total_amount" name="total_amount" class="form-control" placeholder="0.00" required>
                         </div>
                         <div class="col-md-1">
                             <label class="form-label small text-muted fw-bold mb-1">Situação</label>
@@ -285,43 +177,85 @@
                     </form>
                 </div>
 
+                <!-- Formulário de Upload de Planilha Fechada -->
+                <div class="card border-0 shadow-sm p-4 mb-4 no-print">
+                    <h5 class="card-title fw-bold mb-3"><i class="bi bi-file-earmark-excel text-primary me-2"></i>Ou Importar Planilha Fechada (Excel)</h5>
+                    <form action="/upload-html" method="post" enctype="multipart/form-data" class="row g-2">
+                        <div class="col-md-3">
+                            <input type="text" name="month_year" class="form-control" placeholder="Mês/Ano (Ex: 09/2026)" required>
+                        </div>
+                        <div class="col-md-4">
+                            <input type="text" name="event_name" class="form-control" placeholder="Nome do Evento (Opcional)">
+                        </div>
+                        <div class="col-md-3">
+                            <input type="file" name="file" accept=".xlsx, .xlsm" class="form-control" required>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary fw-bold w-100">Criar Pasta</button>
+                        </div>
+                    </form>
+
+                    {% if batches %}
+                    <hr>
+                    <div class="accordion" id="batchAccordion">
+                        <div class="accordion-item border-0">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed px-0 bg-transparent text-secondary fw-bold shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collapseBatches">
+                                    <i class="bi bi-clock-history me-2"></i> Histórico de Planilhas Importadas ({{ batches|length }})
+                                </button>
+                            </h2>
+                            <div id="collapseBatches" class="accordion-collapse collapse" data-bs-parent="#batchAccordion">
+                                <div class="accordion-body px-0 pt-2">
+                                    <ul class="list-group list-group-flush">
+                                        {% for b in batches %}
+                                        <li class="list-group-item d-flex justify-content-between align-items-center bg-transparent px-0">
+                                            <div>
+                                                <span class="badge bg-primary me-2">{{ b.month_year }}</span>
+                                                <strong class="text-dark">{{ b.event_name or b.filename }}</strong>
+                                                <small class="text-muted ms-2">({{ b.filename }}) — {{ b.items_count }} registros</small>
+                                            </div>
+                                            <form action="/batches/{{ b.id }}/delete" method="post" onsubmit="return confirm('Remover esta planilha e todos os seus lançamentos?')">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                    <i class="bi bi-trash"></i> Apagar
+                                                </button>
+                                            </form>
+                                        </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
                 <!-- Pastas da Cantina -->
-                <h4 class="fw-bold text-secondary mb-3"><i class="bi bi-folder-fill text-warning me-2"></i>Pastas da
-                    Cantina e Loja</h4>
+                <h4 class="fw-bold text-secondary mb-3"><i class="bi bi-folder-fill text-warning me-2"></i>Pastas da Cantina e Loja</h4>
 
                 {% if not folders %}
                 <div class="card border-0 shadow-sm p-5 text-center text-muted">
                     <i class="bi bi-folder2-open display-4 mb-2"></i>
-                    <p class="m-0">Nenhuma comanda ou planilha cadastrada ainda. Faça um lançamento ao vivo ou importe
-                        uma planilha acima!</p>
+                    <p class="m-0">Nenhuma comanda ou planilha cadastrada ainda. Faça um lançamento ao vivo ou importe uma planilha acima!</p>
                 </div>
                 {% else %}
                 <div class="accordion mb-4" id="foldersAccordion">
                     {% for folder in folders %}
                     <div class="accordion-item border-0 shadow-sm mb-3 rounded-3 overflow-hidden">
                         <h2 class="accordion-header">
-                            <button class="accordion-button {% if not loop.first %}collapsed{% endif %} bg-white py-3"
-                                type="button" data-bs-toggle="collapse" data-bs-target="#folder{{ loop.index }}">
+                            <button class="accordion-button {% if not loop.first %}collapsed{% endif %} bg-white py-3" type="button" data-bs-toggle="collapse" data-bs-target="#folder{{ loop.index }}">
                                 <div class="d-flex justify-content-between align-items-center w-100 me-3">
                                     <div>
-                                        <span class="fs-5 fw-bold text-dark"><i
-                                                class="bi bi-folder2 text-warning me-2"></i> Mês: {{ folder.month_year
-                                            }}</span>
-                                        <span class="badge bg-secondary ms-2">{{ folder.consumptions|length }}
-                                            lançamentos</span>
+                                        <span class="fs-5 fw-bold text-dark"><i class="bi bi-folder2 text-warning me-2"></i> Mês: {{ folder.month_year }}</span>
+                                        <span class="badge bg-secondary ms-2">{{ folder.consumptions|length }} lançamentos</span>
                                     </div>
                                     <div class="text-end">
-                                        <span class="badge bg-success me-1">Pago: R$ {{ "%.2f"|format(folder.total_pago)
-                                            }}</span>
-                                        <span class="badge bg-warning text-dark">Pendente: R$ {{
-                                            "%.2f"|format(folder.total_pendente) }}</span>
+                                        <span class="badge bg-success me-1">Pago: R$ {{ "%.2f"|format(folder.total_pago) }}</span>
+                                        <span class="badge bg-warning text-dark">Pendente: R$ {{ "%.2f"|format(folder.total_pendente) }}</span>
                                     </div>
                                 </div>
                             </button>
                         </h2>
-                        <div id="folder{{ loop.index }}"
-                            class="accordion-collapse collapse {% if loop.first %}show{% endif %}"
-                            data-bs-parent="#foldersAccordion">
+                        <div id="folder{{ loop.index }}" class="accordion-collapse collapse {% if loop.first %}show{% endif %}" data-bs-parent="#foldersAccordion">
                             <div class="accordion-body bg-white pt-0">
                                 <div class="table-responsive">
                                     <table class="table table-hover align-middle mb-0">
@@ -341,48 +275,36 @@
                                             <tr>
                                                 <td class="fw-bold">{{ item.person_name }}</td>
                                                 <td>
-                                                    <span
-                                                        class="badge {% if item.category == 'Loja' %}bg-purple text-white style="
-                                                        background-color:#6f42c1;"{% else %}bg-dark{% endif %}">
+                                                    <span class="badge {% if item.category == 'Loja' %}bg-purple text-white{% else %}bg-dark{% endif %}"{% if item.category == 'Loja' %} style="background-color:#6f42c1;"{% endif %}>
                                                         {{ item.category }}
                                                     </span>
                                                 </td>
                                                 <td>
-                                                    <span
-                                                        class="badge {% if item.group == 'Filho da Casa' %}bg-info{% else %}bg-secondary{% endif %}">
+                                                    <span class="badge {% if item.group == 'Filho da Casa' %}bg-info{% else %}bg-secondary{% endif %}">
                                                         {{ item.group }}
                                                     </span>
                                                 </td>
                                                 <td>{{ item.raw_items }}</td>
                                                 <td class="fw-bold">R$ {{ "%.2f"|format(item.total_amount) }}</td>
                                                 <td>
-                                                    <span
-                                                        class="badge {% if item.status == 'PAGO' %}bg-success{% else %}bg-warning text-dark{% endif %}">
+                                                    <span class="badge {% if item.status == 'PAGO' %}bg-success{% else %}bg-warning text-dark{% endif %}">
                                                         {{ item.status }}
                                                     </span>
                                                 </td>
                                                 <td class="text-center no-print">
                                                     <div class="btn-group btn-group-sm">
                                                         {% if item.status == 'PENDENTE' %}
-                                                        <form action="/consumptions/{{ item.id }}/pay" method="post"
-                                                            class="d-inline">
-                                                            <button type="submit" class="btn btn-outline-success"
-                                                                title="Dar Baixa (PAGO)">
+                                                        <form action="/consumptions/{{ item.id }}/pay" method="post" class="d-inline">
+                                                            <button type="submit" class="btn btn-outline-success" title="Dar Baixa (PAGO)">
                                                                 <i class="bi bi-check-lg"></i>
                                                             </button>
                                                         </form>
                                                         {% endif %}
-                                                        <button type="button" class="btn btn-outline-primary"
-                                                            data-item="{{ item|tojson|forceescape }}"
-                                                            onclick="openEditModal(JSON.parse(this.dataset.item))"
-                                                            title="Editar">
+                                                        <button type="button" class="btn btn-outline-primary" data-item='{{ item|tojson|safe }}' onclick="openEditModal(JSON.parse(this.dataset.item))" title="Editar">
                                                             <i class="bi bi-pencil"></i>
                                                         </button>
-                                                        <form action="/consumptions/{{ item.id }}/delete" method="post"
-                                                            class="d-inline"
-                                                            onsubmit="return confirm('Excluir este registro?')">
-                                                            <button type="submit" class="btn btn-outline-danger"
-                                                                title="Excluir">
+                                                        <form action="/consumptions/{{ item.id }}/delete" method="post" class="d-inline" onsubmit="return confirm('Excluir este registro?')">
+                                                            <button type="submit" class="btn btn-outline-danger" title="Excluir">
                                                                 <i class="bi bi-trash"></i>
                                                             </button>
                                                         </form>
@@ -425,12 +347,10 @@
                 </div>
 
                 <div class="card border-0 shadow-sm p-4 mb-4 no-print">
-                    <h5 class="card-title fw-bold mb-3 text-primary"><i class="bi bi-calendar-plus me-2"></i>Gerar Folha
-                        de Mensalidades do Mês</h5>
+                    <h5 class="card-title fw-bold mb-3 text-primary"><i class="bi bi-calendar-plus me-2"></i>Gerar Folha de Mensalidades do Mês</h5>
                     <form action="/monthly-fees/generate" method="post" class="row g-2">
                         <div class="col-md-6">
-                            <input type="text" name="month_year" class="form-control"
-                                placeholder="Mês/Ano (Ex: 09/2026)" required>
+                            <input type="text" name="month_year" class="form-control" placeholder="Mês/Ano (Ex: 09/2026)" required>
                         </div>
                         <div class="col-md-6">
                             <button type="submit" class="btn btn-primary fw-bold w-100">
@@ -440,8 +360,7 @@
                     </form>
                 </div>
 
-                <h4 class="fw-bold text-secondary mb-3"><i class="bi bi-journal-check text-primary me-2"></i>Folhas de
-                    Mensalidades</h4>
+                <h4 class="fw-bold text-secondary mb-3"><i class="bi bi-journal-check text-primary me-2"></i>Folhas de Mensalidades</h4>
 
                 {% if not fee_folders %}
                 <div class="card border-0 shadow-sm p-5 text-center text-muted">
@@ -453,35 +372,26 @@
                     {% for folder in fee_folders %}
                     <div class="accordion-item border-0 shadow-sm mb-3 rounded-3 overflow-hidden">
                         <h2 class="accordion-header">
-                            <button class="accordion-button {% if not loop.first %}collapsed{% endif %} bg-white py-3"
-                                type="button" data-bs-toggle="collapse" data-bs-target="#feeFolder{{ loop.index }}">
+                            <button class="accordion-button {% if not loop.first %}collapsed{% endif %} bg-white py-3" type="button" data-bs-toggle="collapse" data-bs-target="#feeFolder{{ loop.index }}">
                                 <div class="d-flex justify-content-between align-items-center w-100 me-3">
                                     <div>
-                                        <span class="fs-5 fw-bold text-dark"><i
-                                                class="bi bi-calendar-check text-primary me-2"></i> Mês: {{
-                                            folder.month_year }}</span>
+                                        <span class="fs-5 fw-bold text-dark"><i class="bi bi-calendar-check text-primary me-2"></i> Mês: {{ folder.month_year }}</span>
                                         <span class="badge bg-secondary ms-2">9 integrantes</span>
                                     </div>
                                     <div class="text-end">
-                                        <span class="badge bg-success me-1">Arrecadado: R$ {{
-                                            "%.2f"|format(folder.total_pago) }}</span>
-                                        <span class="badge bg-danger">Falta Pagar: R$ {{
-                                            "%.2f"|format(folder.total_pendente) }}</span>
+                                        <span class="badge bg-success me-1">Arrecadado: R$ {{ "%.2f"|format(folder.total_pago) }}</span>
+                                        <span class="badge bg-danger">Falta Pagar: R$ {{ "%.2f"|format(folder.total_pendente) }}</span>
                                     </div>
                                 </div>
                             </button>
                         </h2>
-                        <div id="feeFolder{{ loop.index }}"
-                            class="accordion-collapse collapse {% if loop.first %}show{% endif %}"
-                            data-bs-parent="#feesAccordion">
+                        <div id="feeFolder{{ loop.index }}" class="accordion-collapse collapse {% if loop.first %}show{% endif %}" data-bs-parent="#feesAccordion">
                             <div class="accordion-body bg-white pt-2">
                                 <div class="d-flex justify-content-end mb-3 no-print">
-                                    <form action="/monthly-fees/delete-month" method="post"
-                                        onsubmit="return confirm('EXCLUIR permanentemente a folha de mensalidades do mês {{ folder.month_year }}?')">
+                                    <form action="/monthly-fees/delete-month" method="post" onsubmit="return confirm('EXCLUIR permanentemente a folha de mensalidades do mês {{ folder.month_year }}?')">
                                         <input type="hidden" name="month_year" value="{{ folder.month_year }}">
                                         <button type="submit" class="btn btn-sm btn-outline-danger fw-bold">
-                                            <i class="bi bi-trash me-1"></i> Excluir Folha do Mês {{ folder.month_year
-                                            }}
+                                            <i class="bi bi-trash me-1"></i> Excluir Folha do Mês {{ folder.month_year }}
                                         </button>
                                     </form>
                                 </div>
@@ -500,23 +410,19 @@
                                             {% for item in folder.fees %}
                                             <tr>
                                                 <td class="fw-bold">{{ item.person_name }}</td>
-                                                <td class="fw-bold text-secondary">R$ {{ "%.2f"|format(item.amount) }}
-                                                </td>
+                                                <td class="fw-bold text-secondary">R$ {{ "%.2f"|format(item.amount) }}</td>
                                                 <td>
-                                                    <span
-                                                        class="badge {% if item.status == 'PAGO' %}bg-success{% else %}bg-danger{% endif %}">
+                                                    <span class="badge {% if item.status == 'PAGO' %}bg-success{% else %}bg-danger{% endif %}">
                                                         {{ item.status }}
                                                     </span>
                                                 </td>
                                                 <td class="text-center no-print">
-                                                    <form action="/monthly-fees/{{ item.id }}/pay" method="post"
-                                                        class="d-inline">
-                                                        <button type="submit"
-                                                            class="btn btn-sm {% if item.status == 'PAGO' %}btn-outline-warning{% else %}btn-success{% endif %} fw-bold">
+                                                    <form action="/monthly-fees/{{ item.id }}/pay" method="post" class="d-inline">
+                                                        <button type="submit" class="btn btn-sm {% if item.status == 'PAGO' %}btn-outline-warning{% else %}btn-success{% endif %} fw-bold">
                                                             {% if item.status == 'PAGO' %}
-                                                            <i class="bi bi-arrow-counterclockwise"></i> Desfazer Baixa
+                                                                <i class="bi bi-arrow-counterclockwise"></i> Desfazer Baixa
                                                             {% else %}
-                                                            <i class="bi bi-check-lg"></i> Dar Baixa (PAGO)
+                                                                <i class="bi bi-check-lg"></i> Dar Baixa (PAGO)
                                                             {% endif %}
                                                         </button>
                                                     </form>
@@ -571,8 +477,7 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-bold">Valor Total (R$)</label>
-                            <input type="number" step="0.01" id="editAmount" name="total_amount" class="form-control"
-                                required>
+                            <input type="number" step="0.01" id="editAmount" name="total_amount" class="form-control" required>
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-bold">Situação</label>
@@ -601,12 +506,39 @@
             document.getElementById('editItems').value = item.raw_items;
             document.getElementById('editAmount').value = item.total_amount;
             document.getElementById('editStatus').value = item.status;
-
+            
             var modal = new bootstrap.Modal(document.getElementById('editModal'));
             modal.show();
         }
 
-        document.addEventListener("DOMContentLoaded", function () {
+        function addItemQuick(itemName, price) {
+            var itemsInput = document.getElementById('live_raw_items');
+            var amountInput = document.getElementById('live_total_amount');
+
+            if (itemsInput.value.trim() === '') {
+                itemsInput.value = itemName;
+            } else {
+                itemsInput.value += ' + ' + itemName;
+            }
+
+            var currentAmount = parseFloat(amountInput.value) || 0.0;
+            var newAmount = currentAmount + price;
+            amountInput.value = newAmount.toFixed(2);
+        }
+
+        function clearLiveForm() {
+            document.getElementById('live_raw_items').value = '';
+            document.getElementById('live_total_amount').value = '';
+            document.getElementById('live_person_name').value = '';
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            var dateInput = document.getElementById('event_date_input');
+            if (dateInput) {
+                var today = new Date().toISOString().split('T')[0];
+                dateInput.value = today;
+            }
+
             var hash = window.location.hash;
             if (hash === "#pills-fees") {
                 var triggerEl = document.querySelector('#pills-fees-tab');
@@ -617,42 +549,5 @@
             }
         });
     </script>
-
-    <script>
-        // Função para adicionar itens rápidos e somar o valor
-        function addItemQuick(itemName, price) {
-            var itemsInput = document.getElementById('live_raw_items');
-            var amountInput = document.getElementById('live_total_amount');
-
-            // Adiciona o nome do item
-            if (itemsInput.value.trim() === '') {
-                itemsInput.value = itemName;
-            } else {
-                itemsInput.value += ' + ' + itemName;
-            }
-
-            // Soma o valor
-            var currentAmount = parseFloat(amountInput.value) || 0.0;
-            var newAmount = currentAmount + price;
-            amountInput.value = newAmount.toFixed(2);
-        }
-
-        // Função para limpar o formulário de comanda ao vivo
-        function clearLiveForm() {
-            document.getElementById('live_raw_items').value = '';
-            document.getElementById('live_total_amount').value = '';
-            document.getElementById('live_person_name').value = '';
-        }
-
-        // Preenche a data de hoje por padrão
-        document.addEventListener("DOMContentLoaded", function () {
-            var dateInput = document.getElementById('event_date_input');
-            if (dateInput) {
-                var today = new Date().toISOString().split('T')[0];
-                dateInput.value = today;
-            }
-        });
-    </script>
 </body>
-
 </html>
