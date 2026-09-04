@@ -1,217 +1,519 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestão Financeira - Cantina</title>
+    <title>Gestão Financeira - Terreiro</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    
+
     <style>
+        .nav-pills .nav-link {
+            font-size: 1.1rem;
+            padding: 10px 20px;
+            border-radius: 8px;
+            color: #6c757d;
+            background-color: #e9ecef;
+        }
+
+        .nav-pills .nav-link.active {
+            background-color: #0d6efd;
+            color: #fff;
+        }
+
         @media print {
-            .no-print, form, .btn, .accordion, .input-group, select, #clearFiltersBtn {
+
+            .no-print,
+            form,
+            .btn,
+            .accordion,
+            .input-group,
+            select,
+            .nav-pills {
                 display: none !important;
             }
-            body { background-color: #fff !important; font-size: 12pt; }
-            .container { max-width: 100% !important; padding: 0 !important; }
-            .card { border: none !important; box-shadow: none !important; }
-            .table-responsive { overflow: visible !important; }
-            .badge { border: 1px solid #000; color: #000 !important; background-color: transparent !important; }
+
+            body {
+                background-color: #fff !important;
+                font-size: 12pt;
+            }
+
+            .container {
+                max-width: 100% !important;
+                padding: 0 !important;
+            }
+
+            .card {
+                border: none !important;
+                box-shadow: none !important;
+            }
+
+            .badge {
+                border: 1px solid #000;
+                color: #000 !important;
+                background-color: transparent !important;
+            }
         }
     </style>
 </head>
+
 <body class="bg-light">
-    <div class="container py-5">
+    <div class="container py-4">
+        <!-- CABEÇALHO -->
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2 class="fw-bold text-secondary m-0">Controle de Cantina e Eventos</h2>
+            <div>
+                <h2 class="fw-bold text-dark m-0">Controle Financeiro</h2>
+                <small class="text-muted">Gestão independente de Mensalidades e Eventos da Casa</small>
+            </div>
             <div class="no-print">
-                <a href="/export-excel" class="btn btn-outline-success fw-bold me-2">
-                    <i class="bi bi-file-earmark-excel me-1"></i> Exportar Geral (Excel)
-                </a>
                 <button type="button" class="btn btn-outline-danger fw-bold" onclick="window.print()">
                     <i class="bi bi-file-earmark-pdf me-1"></i> Imprimir Relatório
                 </button>
             </div>
         </div>
 
-        <!-- Cards de Resumo Geral -->
-        <div class="row g-3 mb-4">
-            <div class="col-md-4">
-                <div class="card border-0 shadow-sm bg-primary text-white p-3">
-                    <small class="text-white-50">ACUMULADO GERAL</small>
-                    <h3 class="fw-bold m-0">R$ {{ "%.2f"|format(total_geral) }}</h3>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card border-0 shadow-sm bg-success text-white p-3">
-                    <small class="text-white-50">TOTAL RECEBIDO</small>
-                    <h3 class="fw-bold m-0">R$ {{ "%.2f"|format(total_pago) }}</h3>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card border-0 shadow-sm bg-warning text-dark p-3">
-                    <small class="text-dark-50">TOTAL PENDENTE</small>
-                    <h3 class="fw-bold m-0">R$ {{ "%.2f"|format(total_pendente) }}</h3>
-                </div>
-            </div>
-        </div>
+        <!-- SELETOR DE MÓDULOS -->
+        <ul class="nav nav-pills mb-4 no-print" id="pills-tab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active fw-bold me-2" id="pills-cantina-tab" data-bs-toggle="pill"
+                    data-bs-target="#pills-cantina" type="button" role="tab">
+                    <i class="bi bi-shop me-2"></i> Cantina e Loja
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link fw-bold" id="pills-fees-tab" data-bs-toggle="pill" data-bs-target="#pills-fees"
+                    type="button" role="tab">
+                    <i class="bi bi-people-fill me-2"></i> Mensalidades (R$ 90,00)
+                </button>
+            </li>
+        </ul>
 
-        <!-- Formulário de Upload e Seleção de Mês -->
-        <div class="card border-0 shadow-sm p-4 mb-4 no-print">
-            <h5 class="card-title fw-bold mb-3"><i class="bi bi-folder-plus text-primary me-2"></i>Nova Planilha por Mês/Evento</h5>
-            <form action="/upload-html" method="post" enctype="multipart/form-data" class="row g-2">
-                <div class="col-md-3">
-                    <label class="form-label small text-muted fw-bold mb-1">Mês/Ano</label>
-                    <input type="text" name="month_year" class="form-control" placeholder="Ex: 09/2026" required>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label small text-muted fw-bold mb-1">Nome do Evento (Opcional)</label>
-                    <input type="text" name="event_name" class="form-control" placeholder="Ex: Gira de Setembro">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label small text-muted fw-bold mb-1">Planilha Excel</label>
-                    <input type="file" name="file" accept=".xlsx, .xlsm" class="form-control" required>
-                </div>
-                <div class="col-md-2 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary fw-bold w-100">Criar Pasta</button>
-                </div>
-            </form>
+        <div class="tab-content" id="pills-tabContent">
 
-            {% if batches %}
-            <hr>
-            <div class="accordion" id="batchAccordion">
-                <div class="accordion-item border-0">
-                    <h2 class="accordion-header">
-                        <button class="accordion-button collapsed px-0 bg-transparent text-secondary fw-bold shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#collapseBatches">
-                            <i class="bi bi-clock-history me-2"></i> Histórico de Importações ({{ batches|length }})
-                        </button>
-                    </h2>
-                    <div id="collapseBatches" class="accordion-collapse collapse" data-bs-parent="#batchAccordion">
-                        <div class="accordion-body px-0 pt-2">
-                            <ul class="list-group list-group-flush">
-                                {% for b in batches %}
-                                <li class="list-group-item d-flex justify-content-between align-items-center bg-transparent px-0">
+            <!-- CANTINA E LOJA -->
+            <div class="tab-pane fade show active" id="pills-cantina" role="tabpanel">
+
+                <!-- Cards de Resumo -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <div class="card border-0 shadow-sm bg-primary text-white p-3">
+                            <small class="text-white-50 fw-bold">CANTINA & LOJA — TOTAL GERAL</small>
+                            <h3 class="fw-bold m-0">R$ {{ "%.2f"|format(cantina_total_geral) }}</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card border-0 shadow-sm bg-success text-white p-3">
+                            <small class="text-white-50 fw-bold">CANTINA & LOJA — RECEBIDO</small>
+                            <h3 class="fw-bold m-0">R$ {{ "%.2f"|format(cantina_total_pago) }}</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card border-0 shadow-sm bg-warning text-dark p-3">
+                            <small class="text-dark-50 fw-bold">CANTINA & LOJA — PENDENTE</small>
+                            <h3 class="fw-bold m-0">R$ {{ "%.2f"|format(cantina_total_pendente) }}</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Formulário de Comanda Ao Vivo -->
+                <div class="card border-0 shadow-sm p-4 mb-4 no-print border-start border-4 border-success">
+                    <h5 class="card-title fw-bold mb-3 text-success">
+                        <i class="bi bi-plus-circle me-2"></i>Comanda Ao Vivo / Frente de Caixa (Lançar Pedido)
+                    </h5>
+                    <form action="/consumptions/direct-add" method="post" class="row g-2">
+                        <div class="col-md-2">
+                            <label class="form-label small text-muted fw-bold mb-1">Data do Dia</label>
+                            <input type="date" id="event_date_input" name="event_date" class="form-control" required>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small text-muted fw-bold mb-1">Nome Cliente</label>
+                            <input type="text" name="person_name" class="form-control" placeholder="Nome" required>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small text-muted fw-bold mb-1">Origem</label>
+                            <select name="category" class="form-select">
+                                <option value="Cantina">Cantina</option>
+                                <option value="Loja">Loja</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small text-muted fw-bold mb-1">Grupo</label>
+                            <select name="group" class="form-select">
+                                <option value="Filho da Casa">Filho da Casa</option>
+                                <option value="Visitante">Visitante</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small text-muted fw-bold mb-1">Itens Consumidos</label>
+                            <input type="text" name="raw_items" class="form-control" placeholder="Ex: 2 Sucos + Torta"
+                                required>
+                        </div>
+                        <div class="col-md-1">
+                            <label class="form-label small text-muted fw-bold mb-1">Valor (R$)</label>
+                            <input type="number" step="0.01" name="total_amount" class="form-control" placeholder="0.00"
+                                required>
+                        </div>
+                        <div class="col-md-1">
+                            <label class="form-label small text-muted fw-bold mb-1">Situação</label>
+                            <select name="status" class="form-select">
+                                <option value="PAGO">PAGO</option>
+                                <option value="PENDENTE">PENDENTE</option>
+                            </select>
+                        </div>
+                        <div class="col-12 mt-3 text-end">
+                            <button type="submit" class="btn btn-success fw-bold px-4">
+                                <i class="bi bi-check2-circle me-1"></i> Lançar na Comanda
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Script no final do arquivo para preencher automaticamente com a data de hoje -->
+                <script>
+                    document.addEventListener("DOMContentLoaded", function () {
+                        var dateInput = document.getElementById('event_date_input');
+                        if (dateInput) {
+                            var today = new Date().toISOString().split('T')[0];
+                            dateInput.value = today;
+                        }
+                    });
+                </script>
+
+                <!-- Formulário de Upload de Planilha -->
+                <div class="card border-0 shadow-sm p-4 mb-4 no-print">
+                    <h5 class="card-title fw-bold mb-3"><i class="bi bi-file-earmark-excel text-primary me-2"></i>Ou
+                        Importar Planilha Fechada (Excel)</h5>
+                    <form action="/upload-html" method="post" enctype="multipart/form-data" class="row g-2">
+                        <div class="col-md-3">
+                            <input type="text" name="month_year" class="form-control"
+                                placeholder="Mês/Ano (Ex: 09/2026)" required>
+                        </div>
+                        <div class="col-md-4">
+                            <input type="text" name="event_name" class="form-control"
+                                placeholder="Nome do Evento (Opcional)">
+                        </div>
+                        <div class="col-md-3">
+                            <input type="file" name="file" accept=".xlsx, .xlsm" class="form-control" required>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary fw-bold w-100">Criar Pasta</button>
+                        </div>
+                    </form>
+
+                    {% if batches %}
+                    <hr>
+                    <div class="accordion" id="batchAccordion">
+                        <div class="accordion-item border-0">
+                            <h2 class="accordion-header">
+                                <button
+                                    class="accordion-button collapsed px-0 bg-transparent text-secondary fw-bold shadow-none"
+                                    type="button" data-bs-toggle="collapse" data-bs-target="#collapseBatches">
+                                    <i class="bi bi-clock-history me-2"></i> Histórico de Planilhas Importadas ({{
+                                    batches|length }})
+                                </button>
+                            </h2>
+                            <div id="collapseBatches" class="accordion-collapse collapse"
+                                data-bs-parent="#batchAccordion">
+                                <div class="accordion-body px-0 pt-2">
+                                    <ul class="list-group list-group-flush">
+                                        {% for b in batches %}
+                                        <li
+                                            class="list-group-item d-flex justify-content-between align-items-center bg-transparent px-0">
+                                            <div>
+                                                <span class="badge bg-primary me-2">{{ b.month_year }}</span>
+                                                <strong class="text-dark">{{ b.event_name or b.filename }}</strong>
+                                                <small class="text-muted ms-2">({{ b.filename }}) — {{ b.items_count }}
+                                                    registros</small>
+                                            </div>
+                                            <form action="/batches/{{ b.id }}/delete" method="post"
+                                                onsubmit="return confirm('Remover esta planilha e todos os seus lançamentos?')">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                    <i class="bi bi-trash"></i> Apagar
+                                                </button>
+                                            </form>
+                                        </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Pastas da Cantina -->
+                <h4 class="fw-bold text-secondary mb-3"><i class="bi bi-folder-fill text-warning me-2"></i>Pastas da
+                    Cantina e Loja</h4>
+
+                {% if not folders %}
+                <div class="card border-0 shadow-sm p-5 text-center text-muted">
+                    <i class="bi bi-folder2-open display-4 mb-2"></i>
+                    <p class="m-0">Nenhuma comanda ou planilha cadastrada ainda. Faça um lançamento ao vivo ou importe
+                        uma planilha acima!</p>
+                </div>
+                {% else %}
+                <div class="accordion mb-4" id="foldersAccordion">
+                    {% for folder in folders %}
+                    <div class="accordion-item border-0 shadow-sm mb-3 rounded-3 overflow-hidden">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button {% if not loop.first %}collapsed{% endif %} bg-white py-3"
+                                type="button" data-bs-toggle="collapse" data-bs-target="#folder{{ loop.index }}">
+                                <div class="d-flex justify-content-between align-items-center w-100 me-3">
                                     <div>
-                                        <span class="badge bg-primary me-2">{{ b.month_year }}</span>
-                                        <strong class="text-dark">{{ b.event_name or b.filename }}</strong>
-                                        <small class="text-muted ms-2">({{ b.filename }}) — {{ b.items_count }} registros</small>
+                                        <span class="fs-5 fw-bold text-dark"><i
+                                                class="bi bi-folder2 text-warning me-2"></i> Mês: {{ folder.month_year
+                                            }}</span>
+                                        <span class="badge bg-secondary ms-2">{{ folder.consumptions|length }}
+                                            lançamentos</span>
                                     </div>
-                                    <form action="/batches/{{ b.id }}/delete" method="post" onsubmit="return confirm('Remover esta importação apagará todos os {{ b.items_count }} registros do mês {{ b.month_year }}. Confirmar?')">
-                                        <button type="submit" class="btn btn-sm btn-outline-danger">
-                                            <i class="bi bi-trash"></i> Apagar Lote
+                                    <div class="text-end">
+                                        <span class="badge bg-success me-1">Pago: R$ {{ "%.2f"|format(folder.total_pago)
+                                            }}</span>
+                                        <span class="badge bg-warning text-dark">Pendente: R$ {{
+                                            "%.2f"|format(folder.total_pendente) }}</span>
+                                    </div>
+                                </div>
+                            </button>
+                        </h2>
+                        <div id="folder{{ loop.index }}"
+                            class="accordion-collapse collapse {% if loop.first %}show{% endif %}"
+                            data-bs-parent="#foldersAccordion">
+                            <div class="accordion-body bg-white pt-0">
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>NOME</th>
+                                                <th>ORIGEM</th>
+                                                <th>GRUPO</th>
+                                                <th>ITENS CONSUMIDOS</th>
+                                                <th>VALOR (R$)</th>
+                                                <th>SITUAÇÃO</th>
+                                                <th class="text-center no-print">AÇÕES</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for item in folder.consumptions %}
+                                            <tr>
+                                                <td class="fw-bold">{{ item.person_name }}</td>
+                                                <td>
+                                                    <span
+                                                        class="badge {% if item.category == 'Loja' %}bg-purple text-white style="
+                                                        background-color:#6f42c1;"{% else %}bg-dark{% endif %}">
+                                                        {{ item.category }}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span
+                                                        class="badge {% if item.group == 'Filho da Casa' %}bg-info{% else %}bg-secondary{% endif %}">
+                                                        {{ item.group }}
+                                                    </span>
+                                                </td>
+                                                <td>{{ item.raw_items }}</td>
+                                                <td class="fw-bold">R$ {{ "%.2f"|format(item.total_amount) }}</td>
+                                                <td>
+                                                    <span
+                                                        class="badge {% if item.status == 'PAGO' %}bg-success{% else %}bg-warning text-dark{% endif %}">
+                                                        {{ item.status }}
+                                                    </span>
+                                                </td>
+                                                <td class="text-center no-print">
+                                                    <div class="btn-group btn-group-sm">
+                                                        {% if item.status == 'PENDENTE' %}
+                                                        <form action="/consumptions/{{ item.id }}/pay" method="post"
+                                                            class="d-inline">
+                                                            <button type="submit" class="btn btn-outline-success"
+                                                                title="Dar Baixa (PAGO)">
+                                                                <i class="bi bi-check-lg"></i>
+                                                            </button>
+                                                        </form>
+                                                        {% endif %}
+                                                        <button type="button" class="btn btn-outline-primary"
+                                                            data-item="{{ item|tojson|forceescape }}"
+                                                            onclick="openEditModal(JSON.parse(this.dataset.item))"
+                                                            title="Editar">
+                                                            <i class="bi bi-pencil"></i>
+                                                        </button>
+                                                        <form action="/consumptions/{{ item.id }}/delete" method="post"
+                                                            class="d-inline"
+                                                            onsubmit="return confirm('Excluir este registro?')">
+                                                            <button type="submit" class="btn btn-outline-danger"
+                                                                title="Excluir">
+                                                                <i class="bi bi-trash"></i>
+                                                            </button>
+                                                        </form>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- MENSALIDADES -->
+            <div class="tab-pane fade" id="pills-fees" role="tabpanel">
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <div class="card border-0 shadow-sm bg-dark text-white p-3">
+                            <small class="text-white-50 fw-bold">MENSALIDADES — TOTAL GERAL</small>
+                            <h3 class="fw-bold m-0">R$ {{ "%.2f"|format(fees_total_geral) }}</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card border-0 shadow-sm bg-success text-white p-3">
+                            <small class="text-white-50 fw-bold">MENSALIDADES — RECEBIDO</small>
+                            <h3 class="fw-bold m-0">R$ {{ "%.2f"|format(fees_total_pago) }}</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card border-0 shadow-sm bg-danger text-white p-3">
+                            <small class="text-white-50 fw-bold">MENSALIDADES — PENDENTE</small>
+                            <h3 class="fw-bold m-0">R$ {{ "%.2f"|format(fees_total_pendente) }}</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card border-0 shadow-sm p-4 mb-4 no-print">
+                    <h5 class="card-title fw-bold mb-3 text-primary"><i class="bi bi-calendar-plus me-2"></i>Gerar Folha
+                        de Mensalidades do Mês</h5>
+                    <form action="/monthly-fees/generate" method="post" class="row g-2">
+                        <div class="col-md-6">
+                            <input type="text" name="month_year" class="form-control"
+                                placeholder="Mês/Ano (Ex: 09/2026)" required>
+                        </div>
+                        <div class="col-md-6">
+                            <button type="submit" class="btn btn-primary fw-bold w-100">
+                                <i class="bi bi-plus-circle me-1"></i> Criar Folha para os 9 Membros (R$ 90,00 cada)
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <h4 class="fw-bold text-secondary mb-3"><i class="bi bi-journal-check text-primary me-2"></i>Folhas de
+                    Mensalidades</h4>
+
+                {% if not fee_folders %}
+                <div class="card border-0 shadow-sm p-5 text-center text-muted">
+                    <i class="bi bi-journal-x display-4 mb-2"></i>
+                    <p class="m-0">Nenhuma folha de mensalidades criada ainda. Digite o Mês/Ano acima!</p>
+                </div>
+                {% else %}
+                <div class="accordion mb-4" id="feesAccordion">
+                    {% for folder in fee_folders %}
+                    <div class="accordion-item border-0 shadow-sm mb-3 rounded-3 overflow-hidden">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button {% if not loop.first %}collapsed{% endif %} bg-white py-3"
+                                type="button" data-bs-toggle="collapse" data-bs-target="#feeFolder{{ loop.index }}">
+                                <div class="d-flex justify-content-between align-items-center w-100 me-3">
+                                    <div>
+                                        <span class="fs-5 fw-bold text-dark"><i
+                                                class="bi bi-calendar-check text-primary me-2"></i> Mês: {{
+                                            folder.month_year }}</span>
+                                        <span class="badge bg-secondary ms-2">9 integrantes</span>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="badge bg-success me-1">Arrecadado: R$ {{
+                                            "%.2f"|format(folder.total_pago) }}</span>
+                                        <span class="badge bg-danger">Falta Pagar: R$ {{
+                                            "%.2f"|format(folder.total_pendente) }}</span>
+                                    </div>
+                                </div>
+                            </button>
+                        </h2>
+                        <div id="feeFolder{{ loop.index }}"
+                            class="accordion-collapse collapse {% if loop.first %}show{% endif %}"
+                            data-bs-parent="#feesAccordion">
+                            <div class="accordion-body bg-white pt-2">
+                                <div class="d-flex justify-content-end mb-3 no-print">
+                                    <form action="/monthly-fees/delete-month" method="post"
+                                        onsubmit="return confirm('EXCLUIR permanentemente a folha de mensalidades do mês {{ folder.month_year }}?')">
+                                        <input type="hidden" name="month_year" value="{{ folder.month_year }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger fw-bold">
+                                            <i class="bi bi-trash me-1"></i> Excluir Folha do Mês {{ folder.month_year
+                                            }}
                                         </button>
                                     </form>
-                                </li>
-                                {% endfor %}
-                            </ul>
+                                </div>
+
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>NOME DO MEMBRO</th>
+                                                <th>VALOR FIXO</th>
+                                                <th>SITUAÇÃO</th>
+                                                <th class="text-center no-print">AÇÃO</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for item in folder.fees %}
+                                            <tr>
+                                                <td class="fw-bold">{{ item.person_name }}</td>
+                                                <td class="fw-bold text-secondary">R$ {{ "%.2f"|format(item.amount) }}
+                                                </td>
+                                                <td>
+                                                    <span
+                                                        class="badge {% if item.status == 'PAGO' %}bg-success{% else %}bg-danger{% endif %}">
+                                                        {{ item.status }}
+                                                    </span>
+                                                </td>
+                                                <td class="text-center no-print">
+                                                    <form action="/monthly-fees/{{ item.id }}/pay" method="post"
+                                                        class="d-inline">
+                                                        <button type="submit"
+                                                            class="btn btn-sm {% if item.status == 'PAGO' %}btn-outline-warning{% else %}btn-success{% endif %} fw-bold">
+                                                            {% if item.status == 'PAGO' %}
+                                                            <i class="bi bi-arrow-counterclockwise"></i> Desfazer Baixa
+                                                            {% else %}
+                                                            <i class="bi bi-check-lg"></i> Dar Baixa (PAGO)
+                                                            {% endif %}
+                                                        </button>
+                                                    </form>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
                     </div>
+                    {% endfor %}
                 </div>
+                {% endif %}
             </div>
-            {% endif %}
-        </div>
 
-        <!-- Pastas Organizadas por Mês/Ano -->
-        <h4 class="fw-bold text-secondary mb-3"><i class="bi bi-folder-fill text-warning me-2"></i>Pastas Mensais</h4>
-
-        {% if not folders %}
-        <div class="card border-0 shadow-sm p-5 text-center text-muted">
-            <i class="bi bi-folder2-open display-4 mb-2"></i>
-            <p class="m-0">Nenhuma pasta criada ainda. Importe uma planilha acima para organizar seus registros!</p>
         </div>
-        {% else %}
-        <div class="accordion mb-4" id="foldersAccordion">
-            {% for folder in folders %}
-            <div class="accordion-item border-0 shadow-sm mb-3 rounded-3 overflow-hidden">
-                <h2 class="accordion-header">
-                    <button class="accordion-button {% if not loop.first %}collapsed{% endif %} bg-white py-3" type="button" data-bs-toggle="collapse" data-bs-target="#folder{{ loop.index }}">
-                        <div class="d-flex justify-content-between align-items-center w-100 me-3">
-                            <div>
-                                <span class="fs-5 fw-bold text-dark"><i class="bi bi-folder2 text-warning me-2"></i> Mês: {{ folder.month_year }}</span>
-                                <span class="badge bg-secondary ms-2">{{ folder.items|length }} consumos</span>
-                            </div>
-                            <div class="text-end">
-                                <span class="badge bg-success me-1">Pago: R$ {{ "%.2f"|format(folder.total_pago) }}</span>
-                                <span class="badge bg-warning text-dark">Pendente: R$ {{ "%.2f"|format(folder.total_pendente) }}</span>
-                            </div>
-                        </div>
-                    </button>
-                </h2>
-                <div id="folder{{ loop.index }}" class="accordion-collapse collapse {% if loop.first %}show{% endif %}" data-bs-parent="#foldersAccordion">
-                    <div class="accordion-body bg-white pt-0">
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>NOME</th>
-                                        <th>GRUPO</th>
-                                        <th>ITENS CONSUMIDOS</th>
-                                        <th>VALOR (R$)</th>
-                                        <th>SITUAÇÃO</th>
-                                        <th class="text-center no-print">AÇÕES</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for item in folder.items %}
-                                    <tr>
-                                        <td class="fw-bold">{{ item.person_name }}</td>
-                                        <td>
-                                            <span class="badge {% if item.group == 'Filho da Casa' %}bg-info{% else %}bg-secondary{% endif %}">
-                                                {{ item.group }}
-                                            </span>
-                                        </td>
-                                        <td>{{ item.raw_items }}</td>
-                                        <td class="fw-bold">R$ {{ "%.2f"|format(item.total_amount) }}</td>
-                                        <td>
-                                            <span class="badge {% if item.status == 'PAGO' %}bg-success{% else %}bg-warning text-dark{% endif %}">
-                                                {{ item.status }}
-                                            </span>
-                                        </td>
-                                        <td class="text-center no-print">
-                                            <div class="btn-group btn-group-sm">
-                                                {% if item.status == 'PENDENTE' %}
-                                                <form action="/consumptions/{{ item.id }}/pay" method="post" class="d-inline">
-                                                    <button type="submit" class="btn btn-outline-success" title="Dar Baixa (PAGO)">
-                                                        <i class="bi bi-check-lg"></i>
-                                                    </button>
-                                                </form>
-                                                {% endif %}
-                                                <button type="button" class="btn btn-outline-primary" data-item="{{ item|tojson|forceescape }}" onclick="openEditModal(this)" title="Editar">
-                                                    <i class="bi bi-pencil"></i>
-                                                </button>
-                                                <form action="/consumptions/{{ item.id }}/delete" method="post" class="d-inline" onsubmit="return confirm('Excluir este registro?')">
-                                                    <button type="submit" class="btn btn-outline-danger" title="Excluir">
-                                                        <i class="bi bi-trash"></i>
-                                                    </button>
-                                                </form>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-        {% endif %}
     </div>
 
-    <!-- Modal de Edição -->
+    <!-- Modal de Edição Cantina/Loja -->
     <div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <form id="editForm" method="post">
                     <div class="modal-header">
-                        <h5 class="modal-title fw-bold">Editar Registro</h5>
+                        <h5 class="modal-title fw-bold">Editar Registro de Consumo</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
                     </div>
                     <div class="modal-body">
                         <div class="mb-3">
                             <label class="form-label fw-bold">Nome</label>
                             <input type="text" id="editName" name="person_name" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Origem</label>
+                            <select id="editCategory" name="category" class="form-select">
+                                <option value="Cantina">Cantina</option>
+                                <option value="Loja">Loja</option>
+                            </select>
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-bold">Grupo</label>
@@ -226,7 +528,8 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-bold">Valor Total (R$)</label>
-                            <input type="number" step="0.01" id="editAmount" name="total_amount" class="form-control" required>
+                            <input type="number" step="0.01" id="editAmount" name="total_amount" class="form-control"
+                                required>
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-bold">Situação</label>
@@ -247,18 +550,30 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        function openEditModal(button) {
-            const item = JSON.parse(button.dataset.item);
+        function openEditModal(item) {
             document.getElementById('editForm').action = '/consumptions/' + item.id + '/edit';
             document.getElementById('editName').value = item.person_name;
+            document.getElementById('editCategory').value = item.category || 'Cantina';
             document.getElementById('editGroup').value = item.group;
             document.getElementById('editItems').value = item.raw_items;
             document.getElementById('editAmount').value = item.total_amount;
             document.getElementById('editStatus').value = item.status;
-            
+
             var modal = new bootstrap.Modal(document.getElementById('editModal'));
             modal.show();
         }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            var hash = window.location.hash;
+            if (hash === "#pills-fees") {
+                var triggerEl = document.querySelector('#pills-fees-tab');
+                if (triggerEl) {
+                    var tab = new bootstrap.Tab(triggerEl);
+                    tab.show();
+                }
+            }
+        });
     </script>
 </body>
+
 </html>
