@@ -303,7 +303,7 @@
                                                             </button>
                                                         </form>
                                                         {% endif %}
-                                                        <button type="button" class="btn btn-outline-primary" data-item="{{ item|tojson|forceescape }}" onclick="openEditModal(JSON.parse(this.dataset.item))" title="Editar">
+                                                        <button type="button" class="btn btn-outline-primary" data-item="{{ item|tojson|forceescape }}" onclick="openEditModal(this.dataset.item)" title="Editar">
                                                             <i class="bi bi-pencil"></i>
                                                         </button>
                                                         <form action="/consumptions/{{ item.id }}/delete" method="post" class="d-inline" onsubmit="return confirm('Excluir este registro?')">
@@ -533,7 +533,7 @@
         </div>
     </div>
 
-    <!-- MODAL DE EDIÇÃO CANTINA/LOJA COM ATALHOS DE PRODUTOS -->
+    <!-- MODAL DE EDIÇÃO CANTINA/LOJA (COM BOTÃO DE LIMPEZA E ATALHOS) -->
     <div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -562,9 +562,14 @@
                             </select>
                         </div>
 
-                        <!-- ATALHOS DE PRODUTOS DENTRO DO MODAL DE EDIÇÃO -->
+                        <!-- ATALHOS DE PRODUTOS + BOTÃO DE LIMPAR -->
                         <div class="mb-3 p-2 bg-light rounded-3 border">
-                            <small class="text-muted fw-bold d-block mb-2"><i class="bi bi-plus-circle-fill text-success me-1"></i> Adicionar item ao registro:</small>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <small class="text-muted fw-bold"><i class="bi bi-plus-circle-fill text-success me-1"></i> Adicionar/Trocar Itens:</small>
+                                <button type="button" class="btn btn-xs btn-outline-danger py-0 px-2 fw-bold" style="font-size:0.75rem;" onclick="clearEditItems()">
+                                    <i class="bi bi-trash me-1"></i> Limpar Itens
+                                </button>
+                            </div>
                             <div class="d-flex flex-wrap gap-1">
                                 <button type="button" class="btn btn-xs btn-outline-dark fw-semibold bg-white py-1 px-2" style="font-size: 0.8rem;" onclick="addItemQuickEdit('Torta de Atum', 12.00)">+ Torta Atum (R$12)</button>
                                 <button type="button" class="btn btn-xs btn-outline-dark fw-semibold bg-white py-1 px-2" style="font-size: 0.8rem;" onclick="addItemQuickEdit('Torta de Frango', 12.00)">+ Torta Frango (R$12)</button>
@@ -580,7 +585,12 @@
 
                         <div class="mb-3">
                             <label class="form-label fw-bold">Itens Consumidos</label>
-                            <input type="text" id="editItems" name="raw_items" class="form-control" required>
+                            <div class="input-group">
+                                <input type="text" id="editItems" name="raw_items" class="form-control" required>
+                                <button class="btn btn-outline-secondary" type="button" onclick="clearEditItems()" title="Limpar Itens">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </div>
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-bold">Valor Total (R$)</label>
@@ -606,6 +616,9 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         function openEditModal(item) {
+            if (typeof item === 'string') {
+                item = JSON.parse(item);
+            }
             document.getElementById('editForm').action = '/consumptions/' + item.id + '/edit';
             document.getElementById('editName').value = item.person_name;
             document.getElementById('editCategory').value = item.category || 'Cantina';
@@ -618,7 +631,7 @@
             modal.show();
         }
 
-        // Adiciona itens na comanda ao vivo (Frente de Caixa)
+        // Adiciona itens na comanda ao vivo
         function addItemQuick(itemName, price) {
             var itemsInput = document.getElementById('live_raw_items');
             var amountInput = document.getElementById('live_total_amount');
@@ -634,7 +647,7 @@
             amountInput.value = newAmount.toFixed(2);
         }
 
-        // Adiciona itens diretamente na janela de EDIÇÃO
+        // Adiciona itens no modal de edição
         function addItemQuickEdit(itemName, price) {
             var itemsInput = document.getElementById('editItems');
             var amountInput = document.getElementById('editAmount');
@@ -648,6 +661,12 @@
             var currentAmount = parseFloat(amountInput.value) || 0.0;
             var newAmount = currentAmount + price;
             amountInput.value = newAmount.toFixed(2);
+        }
+
+        // Limpa os itens e o valor no modal de edição
+        function clearEditItems() {
+            document.getElementById('editItems').value = '';
+            document.getElementById('editAmount').value = '0.00';
         }
 
         function clearLiveForm() {
