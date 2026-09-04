@@ -275,7 +275,7 @@
                                             <tr>
                                                 <td class="fw-bold">{{ item.person_name }}</td>
                                                 <td>
-                                                    <span class="badge {% if item.category == 'Loja' %}bg-purple text-white{% else %}bg-dark{% endif %}"{% if item.category == 'Loja' %} style="background-color:#6f42c1;"{% endif %}>
+                                                    <span class="badge {% if item.category == 'Loja' %}bg-purple text-white{% else %}bg-dark{% endif %}" {% if item.category == 'Loja' %}style="background-color:#6f42c1;"{% endif %}>
                                                         {{ item.category }}
                                                     </span>
                                                 </td>
@@ -300,7 +300,7 @@
                                                             </button>
                                                         </form>
                                                         {% endif %}
-                                                        <button type="button" class="btn btn-outline-primary" data-item='{{ item|tojson|forceescape }}' onclick="openEditModal(JSON.parse(this.dataset.item));" title="Editar">
+                                                        <button type="button" class="btn btn-outline-primary" data-item='{{ item|tojson|forceescape }}' onclick="openEditModal(JSON.parse(this.dataset.item))" title="Editar">
                                                             <i class="bi bi-pencil"></i>
                                                         </button>
                                                         <form action="/consumptions/{{ item.id }}/delete" method="post" class="d-inline" onsubmit="return confirm('Excluir este registro?')">
@@ -326,7 +326,7 @@
             <!-- MENSALIDADES (ÁREA RESTRITA) -->
             <div class="tab-pane fade" id="pills-fees" role="tabpanel">
                 {% if not is_fees_authorized %}
-                <!-- Tela de Login da Aba de Mensalidades -->
+                <!-- Tela de Login da Aba de Mensalidades com Botão de Voltar -->
                 <div class="row justify-content-center py-5">
                     <div class="col-md-5">
                         <div class="card border-0 shadow-sm text-center p-4">
@@ -340,17 +340,27 @@
                                 <div class="mb-3">
                                     <input type="password" name="pin" class="form-control form-control-lg text-center fw-bold" placeholder="Digite o PIN de Acesso" required autofocus>
                                 </div>
-                                <button type="submit" class="btn btn-primary btn-lg fw-bold w-100">
+                                <button type="submit" class="btn btn-primary btn-lg fw-bold w-100 mb-2">
                                     <i class="bi bi-unlock me-1"></i> Liberar Acesso
                                 </button>
                             </form>
+
+                            <!-- BOTÃO DE VOLTAR PARA A PÁGINA PRINCIPAL -->
+                            <button type="button" class="btn btn-link text-secondary text-decoration-none fw-semibold" onclick="goToCantinaTab()">
+                                <i class="bi bi-arrow-left me-1"></i> Voltar para Cantina & Loja
+                            </button>
                         </div>
                     </div>
                 </div>
                 {% else %}
                 <!-- Conteúdo Liberado -->
                 <div class="d-flex justify-content-between align-items-center mb-3 no-print">
-                    <span class="badge bg-success px-3 py-2 fs-6"><i class="bi bi-shield-check me-1"></i> Acesso Gestor Liberado</span>
+                    <div>
+                        <button type="button" class="btn btn-sm btn-outline-primary fw-bold me-2" onclick="goToCantinaTab()">
+                            <i class="bi bi-arrow-left me-1"></i> Voltar para Cantina & Loja
+                        </button>
+                        <span class="badge bg-success px-3 py-2 fs-6"><i class="bi bi-shield-check me-1"></i> Acesso Gestor Liberado</span>
+                    </div>
                     <form action="/monthly-fees/logout" method="post">
                         <button type="submit" class="btn btn-sm btn-outline-secondary fw-bold">
                             <i class="bi bi-lock me-1"></i> Bloquear Área
@@ -564,6 +574,16 @@
             document.getElementById('live_raw_items').value = '';
             document.getElementById('live_total_amount').value = '';
             document.getElementById('live_person_name').value = '';
+        }
+
+        // Função para alternar de volta para a aba principal (Cantina & Loja)
+        function goToCantinaTab() {
+            var cantinaTabTrigger = document.querySelector('#pills-cantina-tab');
+            if (cantinaTabTrigger) {
+                var tab = new bootstrap.Tab(cantinaTabTrigger);
+                tab.show();
+                window.location.hash = '#pills-cantina';
+            }
         }
 
         document.addEventListener("DOMContentLoaded", function() {
