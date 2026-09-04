@@ -1,0 +1,27 @@
+# Ambiente Virtual Python
+.venv/
+venv/
+ENV/
+
+# Caches do Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Banco de Dados Local (para não subir dados de testes/clientes para o Git)
+*.db
+*.sqlite3
+
+# Arquivos de Configuração e Variáveis de Ambiente
+.env
+.env.local
+
+# Arquivos de Configuração do Editor/OS (macOS e VS Code)
+.DS_Store
+.vscode/
+.idea/
+
+# Arquivos Temporários do Excel e Downloads de Teste
+~$*.xlsx
+*.tmp
