@@ -278,7 +278,7 @@
                                             <tr>
                                                 <td class="fw-bold">{{ item.person_name }}</td>
                                                 <td>
-                                                    <span class="badge {% if item.category == 'Loja' %}bg-purple text-white{% else %}bg-dark{% endif %}" {% if item.category == 'Loja' %}style="background-color:#6f42c1;"{% endif %}>
+                                                    <span class="badge {% if item.category == 'Loja' %}bg-purple text-white{% else %}bg-dark{% endif %}"{% if item.category == 'Loja' %} style="background-color:#6f42c1;"{% endif %}>
                                                         {{ item.category }}
                                                     </span>
                                                 </td>
@@ -303,7 +303,7 @@
                                                             </button>
                                                         </form>
                                                         {% endif %}
-                                                        <button type="button" class="btn btn-outline-primary" data-item='{{ item|tojson|e }}' onclick="openEditModal(JSON.parse(this.dataset.item))" title="Editar">
+                                                        <button type="button" class="btn btn-outline-primary" data-item="{{ item|tojson|forceescape }}" onclick="openEditModal(JSON.parse(this.dataset.item))" title="Editar">
                                                             <i class="bi bi-pencil"></i>
                                                         </button>
                                                         <form action="/consumptions/{{ item.id }}/delete" method="post" class="d-inline" onsubmit="return confirm('Excluir este registro?')">
@@ -358,7 +358,6 @@
                 <!-- Conteúdo Liberado -->
                 <div class="d-flex justify-content-between align-items-center mb-3 no-print">
                     <div>
-                        <!-- BOTÃO VOLTAR QUE BLOQUEIA / FAZ LOGOUT DA ÁREA AUTOMATICAMENTE -->
                         <form action="/monthly-fees/logout" method="post" class="d-inline">
                             <button type="submit" class="btn btn-sm btn-outline-primary fw-bold me-2">
                                 <i class="bi bi-arrow-left me-1"></i> Voltar e Bloquear Área
@@ -534,7 +533,7 @@
         </div>
     </div>
 
-    <!-- Modal de Edição Cantina/Loja -->
+    <!-- MODAL DE EDIÇÃO CANTINA/LOJA COM ATALHOS DE PRODUTOS -->
     <div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -562,6 +561,23 @@
                                 <option value="Visitante">Visitante</option>
                             </select>
                         </div>
+
+                        <!-- ATALHOS DE PRODUTOS DENTRO DO MODAL DE EDIÇÃO -->
+                        <div class="mb-3 p-2 bg-light rounded-3 border">
+                            <small class="text-muted fw-bold d-block mb-2"><i class="bi bi-plus-circle-fill text-success me-1"></i> Adicionar item ao registro:</small>
+                            <div class="d-flex flex-wrap gap-1">
+                                <button type="button" class="btn btn-xs btn-outline-dark fw-semibold bg-white py-1 px-2" style="font-size: 0.8rem;" onclick="addItemQuickEdit('Torta de Atum', 12.00)">+ Torta Atum (R$12)</button>
+                                <button type="button" class="btn btn-xs btn-outline-dark fw-semibold bg-white py-1 px-2" style="font-size: 0.8rem;" onclick="addItemQuickEdit('Torta de Frango', 12.00)">+ Torta Frango (R$12)</button>
+                                <button type="button" class="btn btn-xs btn-outline-dark fw-semibold bg-white py-1 px-2" style="font-size: 0.8rem;" onclick="addItemQuickEdit('Empada', 9.00)">+ Empada (R$9)</button>
+                                <button type="button" class="btn btn-xs btn-outline-dark fw-semibold bg-white py-1 px-2" style="font-size: 0.8rem;" onclick="addItemQuickEdit('Bolo', 5.00)">+ Bolo (R$5)</button>
+                                <button type="button" class="btn btn-xs btn-outline-dark fw-semibold bg-white py-1 px-2" style="font-size: 0.8rem;" onclick="addItemQuickEdit('Pudim', 5.00)">+ Pudim (R$5)</button>
+                                <button type="button" class="btn btn-xs btn-outline-dark fw-semibold bg-white py-1 px-2" style="font-size: 0.8rem;" onclick="addItemQuickEdit('Mousse', 5.00)">+ Mousse (R$5)</button>
+                                <button type="button" class="btn btn-xs btn-outline-dark fw-semibold bg-white py-1 px-2" style="font-size: 0.8rem;" onclick="addItemQuickEdit('Refrigerante', 5.00)">+ Refri (R$5)</button>
+                                <button type="button" class="btn btn-xs btn-outline-dark fw-semibold bg-white py-1 px-2" style="font-size: 0.8rem;" onclick="addItemQuickEdit('Café', 5.00)">+ Café (R$5)</button>
+                                <button type="button" class="btn btn-xs btn-outline-dark fw-semibold bg-white py-1 px-2" style="font-size: 0.8rem;" onclick="addItemQuickEdit('Suco', 3.00)">+ Suco (R$3)</button>
+                            </div>
+                        </div>
+
                         <div class="mb-3">
                             <label class="form-label fw-bold">Itens Consumidos</label>
                             <input type="text" id="editItems" name="raw_items" class="form-control" required>
@@ -602,9 +618,26 @@
             modal.show();
         }
 
+        // Adiciona itens na comanda ao vivo (Frente de Caixa)
         function addItemQuick(itemName, price) {
             var itemsInput = document.getElementById('live_raw_items');
             var amountInput = document.getElementById('live_total_amount');
+
+            if (itemsInput.value.trim() === '') {
+                itemsInput.value = itemName;
+            } else {
+                itemsInput.value += ' + ' + itemName;
+            }
+
+            var currentAmount = parseFloat(amountInput.value) || 0.0;
+            var newAmount = currentAmount + price;
+            amountInput.value = newAmount.toFixed(2);
+        }
+
+        // Adiciona itens diretamente na janela de EDIÇÃO
+        function addItemQuickEdit(itemName, price) {
+            var itemsInput = document.getElementById('editItems');
+            var amountInput = document.getElementById('editAmount');
 
             if (itemsInput.value.trim() === '') {
                 itemsInput.value = itemName;
