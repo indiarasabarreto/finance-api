@@ -23,9 +23,21 @@ templates = Jinja2Templates(directory=APP_DIR / "templates")
 # Senha de Acesso para a Aba de Mensalidades (Padrão: 9090)
 MONTHLY_FEES_PIN = os.getenv("MONTHLY_FEES_PIN", "9090")
 
-MEMBERS_LIST = [
-    "Eliana", "Kelvin", "Igor", "Lívia", 
-    "Nicole", "Indiara", "Jhon", "Bruna", "Talles"
+# LISTA OFICIAL DE MEMBROS (INCLUINDO OS NOVOS INTEGANTES E O GRUPO FAMÍLIA)
+MEMBERS_CONFIG = [
+    {"name": "Eliana", "amount": 90.0},
+    {"name": "Kelvin", "amount": 90.0},
+    {"name": "Igor", "amount": 90.0},
+    {"name": "Lívia", "amount": 90.0},
+    {"name": "Nicole", "amount": 90.0},
+    {"name": "Indiara", "amount": 90.0},
+    {"name": "Jhon", "amount": 90.0},
+    {"name": "Bruna", "amount": 90.0},
+    {"name": "Talles", "amount": 90.0},
+    {"name": "Isadora", "amount": 90.0},
+    {"name": "Suyá", "amount": 90.0},
+    {"name": "Ryan", "amount": 90.0},
+    {"name": "Elaine (Bruno, Oxinho, Gabriel)", "amount": 360.0}  # R$ 90 x 4 integrantes
 ]
 
 @app.get("/health")
@@ -255,8 +267,13 @@ def generate_monthly_fees(month_year: str = Form(...), db: Session = Depends(get
         raise HTTPException(status_code=400, detail="A folha deste mês já existe.")
 
     new_fees = [
-        MonthlyFee(person_name=name, month_year=month_year, amount=90.0, status=PaymentStatus.PENDING)
-        for name in MEMBERS_LIST
+        MonthlyFee(
+            person_name=member["name"], 
+            month_year=month_year, 
+            amount=member["amount"], 
+            status=PaymentStatus.PENDING
+        )
+        for member in MEMBERS_CONFIG
     ]
     db.add_all(new_fees)
     db.commit()
