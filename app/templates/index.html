@@ -54,7 +54,7 @@
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link fw-bold me-2" id="pills-fees-tab" data-bs-toggle="pill" data-bs-target="#pills-fees" type="button" role="tab">
-                    <i class="bi bi-people-fill me-2"></i> Mensalidades (R$ 90,00)
+                    <i class="bi bi-people-fill me-2"></i> Mensalidades
                 </button>
             </li>
             <li class="nav-item" role="presentation">
@@ -278,7 +278,7 @@
                                             <tr>
                                                 <td class="fw-bold">{{ item.person_name }}</td>
                                                 <td>
-                                                    <span class="badge {% if item.category == 'Loja' %}bg-purple text-white{% else %}bg-dark{% endif %}"{% if item.category == 'Loja' %} style="background-color:#6f42c1;"{% endif %}>
+                                                    <span class="badge {% if item.category == 'Loja' %}bg-purple text-white style="background-color:#6f42c1;"{% else %}bg-dark{% endif %}">
                                                         {{ item.category }}
                                                     </span>
                                                 </td>
@@ -303,7 +303,7 @@
                                                             </button>
                                                         </form>
                                                         {% endif %}
-                                                        <button type="button" class="btn btn-outline-primary" data-item="{{ item|tojson|forceescape }}" onclick="openEditModal(this.dataset.item)" title="Editar">
+                                                        <button type="button" class="btn btn-outline-primary" data-item='{{ item|tojson|forceescape }}' onclick="openEditModal(JSON.parse(this.dataset.item))" title="Editar">
                                                             <i class="bi bi-pencil"></i>
                                                         </button>
                                                         <form action="/consumptions/{{ item.id }}/delete" method="post" class="d-inline" onsubmit="return confirm('Excluir este registro?')">
@@ -401,7 +401,7 @@
                         </div>
                         <div class="col-md-6">
                             <button type="submit" class="btn btn-primary fw-bold w-100">
-                                <i class="bi bi-plus-circle me-1"></i> Criar Folha para os 9 Membros (R$ 90,00 cada)
+                                <i class="bi bi-plus-circle me-1"></i> Criar Folha de Mensalidades do Mês
                             </button>
                         </div>
                     </form>
@@ -423,7 +423,7 @@
                                 <div class="d-flex justify-content-between align-items-center w-100 me-3">
                                     <div>
                                         <span class="fs-5 fw-bold text-dark"><i class="bi bi-calendar-check text-primary me-2"></i> Mês: {{ folder.month_year }}</span>
-                                        <span class="badge bg-secondary ms-2">9 integrantes</span>
+                                        <span class="badge bg-secondary ms-2">{{ folder.fees|length }} registros</span>
                                     </div>
                                     <div class="text-end">
                                         <span class="badge bg-success me-1">Arrecadado: R$ {{ "%.2f"|format(folder.total_pago) }}</span>
@@ -533,7 +533,7 @@
         </div>
     </div>
 
-    <!-- MODAL DE EDIÇÃO CANTINA/LOJA (COM BOTÃO DE LIMPEZA E ATALHOS) -->
+    <!-- MODAL DE EDIÇÃO -->
     <div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -616,9 +616,6 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         function openEditModal(item) {
-            if (typeof item === 'string') {
-                item = JSON.parse(item);
-            }
             document.getElementById('editForm').action = '/consumptions/' + item.id + '/edit';
             document.getElementById('editName').value = item.person_name;
             document.getElementById('editCategory').value = item.category || 'Cantina';
@@ -631,7 +628,6 @@
             modal.show();
         }
 
-        // Adiciona itens na comanda ao vivo
         function addItemQuick(itemName, price) {
             var itemsInput = document.getElementById('live_raw_items');
             var amountInput = document.getElementById('live_total_amount');
@@ -647,7 +643,6 @@
             amountInput.value = newAmount.toFixed(2);
         }
 
-        // Adiciona itens no modal de edição
         function addItemQuickEdit(itemName, price) {
             var itemsInput = document.getElementById('editItems');
             var amountInput = document.getElementById('editAmount');
@@ -663,7 +658,6 @@
             amountInput.value = newAmount.toFixed(2);
         }
 
-        // Limpa os itens e o valor no modal de edição
         function clearEditItems() {
             document.getElementById('editItems').value = '';
             document.getElementById('editAmount').value = '0.00';
