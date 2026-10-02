@@ -15,6 +15,7 @@ class PaymentStatus(str, Enum):
 class CategoryType(str, Enum):
     CANTINA = "Cantina"
     LOJA = "Loja"
+    CANTINA_LOJA = "Cantina - Loja"
 
 class ImportBatch(Base):
     __tablename__ = "import_batches"

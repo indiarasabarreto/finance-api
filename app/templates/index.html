@@ -191,6 +191,7 @@
                             <select name="category" class="form-select">
                                 <option value="Cantina">Cantina</option>
                                 <option value="Loja">Loja</option>
+                                <option value="Cantina - Loja">Cantina - Loja</option>
                             </select>
                         </div>
                         <div class="col-md-2">
@@ -383,7 +384,7 @@
                                                         <td class="fw-bold">{{ item.person_name }}</td>
                                                         <td>
                                                             <span
-                                                                class="badge {% if item.category == 'Loja' %}bg-purple text-white{% else %}bg-dark{% endif %}"
+                                                                class="badge {% if item.category == 'Loja' %}bg-purple text-white{% elif item.category == 'Cantina - Loja' %}bg-primary text-white{% else %}bg-dark{% endif %}"
                                                                 {% if item.category=='Loja'
                                                                 %}style="background-color:#6f42c1;" {% endif %}>
                                                                 {{ item.category }}
@@ -712,6 +713,7 @@
                                 <select id="editCategory" name="category" class="form-select">
                                     <option value="Cantina">Cantina</option>
                                     <option value="Loja">Loja</option>
+                                    <option value="Cantina - Loja">Cantina - Loja</option>
                                 </select>
                             </div>
                             <div class="mb-3">

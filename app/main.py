@@ -280,9 +280,13 @@ def add_direct_consumption(
         db.flush()
 
     grp_enum = GroupType.FILHO_DA_CASA if group == "Filho da Casa" else GroupType.VISITANTE
-    cat_enum = CategoryType.LOJA if category == "Loja" else CategoryType.CANTINA
+    if category == "Loja":
+        cat_enum = CategoryType.LOJA
+    elif category == "Cantina - Loja":
+        cat_enum = CategoryType.CANTINA_LOJA
+    else:
+        cat_enum = CategoryType.CANTINA
     st_enum = PaymentStatus.PAID if status == "PAGO" else PaymentStatus.PENDING
-
     item_description = f"[{full_date_str}] {raw_items}"
 
     consumption = EventConsumption(
@@ -374,7 +378,12 @@ def edit_consumption(
     if item:
         item.person_name = person_name
         item.group = GroupType.FILHO_DA_CASA if group == "Filho da Casa" else GroupType.VISITANTE
-        item.category = CategoryType.LOJA if category == "Loja" else CategoryType.CANTINA
+        if category == "Loja":
+            item.category = CategoryType.LOJA
+        elif category == "Cantina - Loja":
+            item.category = CategoryType.CANTINA_LOJA
+        else:
+            item.category = CategoryType.CANTINA
         item.raw_items = raw_items
         item.total_amount = total_amount
         item.status = PaymentStatus.PAID if status == "PAGO" else PaymentStatus.PENDING
