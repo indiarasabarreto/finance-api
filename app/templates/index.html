@@ -24,6 +24,7 @@
 
         @media print {
 
+            /* Esconde botões, formulários e abas de navegação no papel */
             .no-print,
             form,
             .btn,
@@ -34,12 +35,18 @@
                 display: none !important;
             }
 
-            .collapse,
-            .tab-pane {
+            /* Força TODAS as abas e sanfonas a ficarem visíveis e abertas */
+            .tab-content>.tab-pane,
+            .accordion-collapse {
                 display: block !important;
                 opacity: 1 !important;
                 visibility: visible !important;
                 height: auto !important;
+            }
+
+            /* Evita que as tabelas fiquem cortadas se forem muito largas */
+            .table-responsive {
+                overflow: visible !important;
             }
 
             body {
@@ -56,6 +63,7 @@
             .accordion-item {
                 border: none !important;
                 box-shadow: none !important;
+                margin-bottom: 20px !important;
             }
 
             .badge {
@@ -366,7 +374,8 @@
 
                                         <div
                                             class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
-                                            <h5 class="m-0 fw-bold text-primary border-bottom pb-2 mb-3">Gira de {{ day.day.strftime('%d/%m/%Y') if day.day else 'Sem data' }}</h5>
+                                            <h5 class="m-0 fw-bold text-primary border-bottom pb-2 mb-3">Gira de {{
+                                                day.day.strftime('%d/%m/%Y') if day.day else 'Sem data' }}</h5>
                                             <div class="text-end">
                                                 <span class="badge bg-success ms-1 fs-6">Pago: R$ {{
                                                     "%.2f"|format(day.pago) }}</span>
