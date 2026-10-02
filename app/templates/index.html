@@ -27,16 +27,24 @@
             .no-print,
             form,
             .btn,
-            .accordion,
             .input-group,
             select,
-            .nav-pills {
+            .nav-pills,
+            .accordion-button {
                 display: none !important;
+            }
+
+            .collapse,
+            .tab-pane {
+                display: block !important;
+                opacity: 1 !important;
+                visibility: visible !important;
+                height: auto !important;
             }
 
             body {
                 background-color: #fff !important;
-                font-size: 12pt;
+                font-size: 11pt;
             }
 
             .container {
@@ -44,7 +52,8 @@
                 padding: 0 !important;
             }
 
-            .card {
+            .card,
+            .accordion-item {
                 border: none !important;
                 box-shadow: none !important;
             }
@@ -67,8 +76,11 @@
                 <small class="text-muted">Gestão independente de Mensalidades e Eventos da Casa</small>
             </div>
             <div class="no-print">
+                <a href="/export-excel" class="btn btn-outline-success fw-bold me-2">
+                    <i class="bi bi-file-earmark-excel me-1"></i> Baixar Planilha (Excel)
+                </a>
                 <button type="button" class="btn btn-outline-danger fw-bold" onclick="window.print()">
-                    <i class="bi bi-file-earmark-pdf me-1"></i> Imprimir Relatório
+                    <i class="bi bi-file-earmark-pdf me-1"></i> Imprimir PDF
                 </button>
             </div>
         </div>
@@ -354,7 +366,7 @@
 
                                         <div
                                             class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
-                                            <h5 class="m-0 fw-bold text-primary">Registros da Gira</h5>
+                                            <h5 class="m-0 fw-bold text-primary border-bottom pb-2 mb-3">Gira de {{ day.day.strftime('%d/%m/%Y') if day.day else 'Sem data' }}</h5>
                                             <div class="text-end">
                                                 <span class="badge bg-success ms-1 fs-6">Pago: R$ {{
                                                     "%.2f"|format(day.pago) }}</span>

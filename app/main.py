@@ -403,3 +403,34 @@ async def upload_html(
     contents = await file.read()
     process_excel_file(contents, file.filename, month_year, event_name, db)
     return RedirectResponse(url="/#pills-cantina", status_code=303)
+
+@app.get("/export-excel")
+def export_excel(db: Session = Depends(get_db)):
+    consumptions = db.query(EventConsumption).all()
+    data = []
+
+    for c in consumptions:
+        dia_evento = extract_event_date(c.raw_items)
+        data.append({
+            "Mês/Ano": c.import_batch.month_year if c.import_batch else "Lançamento Ao Vivo",
+            "Data da Gira": dia_evento.strftime("%d/%m/%Y") if dia_evento else "Sem data",
+            "Nome": c.person_name,
+            "Origem": str(getattr(c.category, 'value', c.category)),
+            "Grupo": str(getattr(c.group, 'value', c.group)),
+            "Itens Consumidos": strip_event_date(c.raw_items),
+            "Valor Bruto (R$)": float(c.total_amount),
+            "Situação": str(getattr(c.status, 'value', c.status)).upper()
+        })
+
+    df = pd.DataFrame(data)
+
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        df.to_excel(writer, index=False, sheet_name="Cantina e Loja")
+
+    output.seek(0)
+    return StreamingResponse(
+        output, 
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
+        headers={"Content-Disposition": "attachment; filename=Relatorio_Terreiro.xlsx"}
+    )
