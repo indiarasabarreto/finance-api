@@ -274,7 +274,17 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {% for item in folder.consumptions %}
+                                            {% for day in folder.days %}
+                                            <tr class="table-light">
+                                                <td colspan="7" class="py-2">
+                                                    <strong><i class="bi bi-calendar-event me-1"></i> Gira de {{ day.day.strftime('%d/%m/%Y') if day.day else 'Sem data' }}</strong>
+                                                    <span class="badge bg-secondary ms-2">{{ day.consumptions|length }} lançamentos</span>
+                                                    <span class="badge bg-success ms-1">Pago: R$ {{ "%.2f"|format(day.pago) }}</span>
+                                                    <span class="badge bg-warning text-dark">Pendente: R$ {{ "%.2f"|format(day.pendente) }}</span>
+                                                    <span class="fw-bold ms-2">Total: R$ {{ "%.2f"|format(day.total) }}</span>
+                                                </td>
+                                            </tr>
+                                            {% for item in day.consumptions %}
                                             <tr>
                                                 <td class="fw-bold">{{ item.person_name }}</td>
                                                 <td>
@@ -287,7 +297,7 @@
                                                         {{ item.group }}
                                                     </span>
                                                 </td>
-                                                <td>{{ item.raw_items }}</td>
+                                                <td>{{ item.raw_items|sem_data }}</td>
                                                 <td class="fw-bold">R$ {{ "%.2f"|format(item.total_amount) }}</td>
                                                 <td>
                                                     <span class="badge {% if item.status == 'PAGO' %}bg-success{% else %}bg-warning text-dark{% endif %}">
@@ -314,6 +324,7 @@
                                                     </div>
                                                 </td>
                                             </tr>
+                                            {% endfor %}
                                             {% endfor %}
                                         </tbody>
                                     </table>

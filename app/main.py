@@ -1,9 +1,10 @@
 import io
+import re
 import os
 import pandas as pd
 from pathlib import Path
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, date
 from fastapi import FastAPI, Depends, UploadFile, File, HTTPException, Request, Form, Cookie, Response
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
@@ -39,6 +40,44 @@ MEMBERS_CONFIG = [
     {"name": "Ryan", "amount": 90.0},
     {"name": "Elaine (Bruno, Oxinho, Gabriel)", "amount": 360.0}  # R$ 90 x 4 integrantes
 ]
+
+# --- AGRUPAMENTO POR DIA DE GIRA ---
+
+DATE_PREFIX_RE = re.compile(r"^\s*\[(\d{2}/\d{2}/\d{4})\]\s*")
+
+def extract_event_date(raw_items):
+    match = DATE_PREFIX_RE.match(raw_items or "")
+    if not match:
+        return None
+    try:
+        return datetime.strptime(match.group(1), "%d/%m/%Y").date()
+    except ValueError:
+        return None
+
+def strip_event_date(raw_items):
+    return DATE_PREFIX_RE.sub("", raw_items or "")
+
+def group_by_day(consumptions):
+    days = {}
+    for c in consumptions:
+        day = extract_event_date(c["raw_items"])
+        group = days.setdefault(day, {
+            "day": day,
+            "consumptions": [],
+            "total": 0.0,
+            "pago": 0.0,
+            "pendente": 0.0,
+        })
+        group["consumptions"].append(c)
+        group["total"] += c["total_amount"]
+        if c["status"] == "PAGO":
+            group["pago"] += c["total_amount"]
+        else:
+            group["pendente"] += c["total_amount"]
+    # dias em ordem do calendario; registros sem data ficam por ultimo
+    return sorted(days.values(), key=lambda g: (g["day"] is None, g["day"] or date.min))
+
+templates.env.filters["sem_data"] = strip_event_date
 
 @app.get("/health")
 def health_check():
@@ -105,7 +144,8 @@ def dashboard(
             "total_geral": f_total,
             "total_pago": f_pago,
             "total_pendente": f_pendente,
-            "consumptions": consumptions_list
+            "consumptions": consumptions_list,
+            "days": group_by_day(consumptions_list)
         })
 
     # --- 2. MENSALIDADES ---

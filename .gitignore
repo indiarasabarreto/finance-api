@@ -12,6 +12,8 @@ __pycache__/
 # Banco de Dados Local (para não subir dados de testes/clientes para o Git)
 *.db
 *.sqlite3
+backup_*.xlsx
+backup_*.csv
 
 # Arquivos de Configuração e Variáveis de Ambiente
 .env
