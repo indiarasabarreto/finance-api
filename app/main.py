@@ -4,19 +4,60 @@ import os
 import pandas as pd
 from pathlib import Path
 from collections import defaultdict
-from datetime import datetime, date
+from datetime import datetime, date, timedelta, timezone
+from urllib.parse import urlparse
 from fastapi import FastAPI, Depends, UploadFile, File, HTTPException, Request, Form, Cookie, Response
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.database import engine, Base, get_db
-from app.models import EventConsumption, PaymentStatus, GroupType, CategoryType, ImportBatch, MonthlyFee
+from app.database import engine, Base, get_db, SessionLocal
+from app.models import EventConsumption, PaymentStatus, GroupType, CategoryType, ImportBatch, MonthlyFee, MenuItem
 from app.services.excel_import import process_excel_file
 
 Base.metadata.create_all(bind=engine)
 
 APP_DIR = Path(__file__).resolve().parent
+
+# Horário de Brasília (UTC-3). O servidor (Render) roda em UTC, então sem isso
+# "hoje" virava "amanhã" depois das 21h.
+BR_TZ = timezone(timedelta(hours=-3))
+
+# Cardápio inicial (só é usado se a tabela estiver vazia)
+DEFAULT_MENU = [
+    ("Torta de Atum", 12.0), ("Torta de Frango", 12.0), ("Empada", 9.0),
+    ("Bolo", 5.0), ("Pudim", 5.0), ("Mousse", 5.0),
+    ("Refrigerante", 5.0), ("Café", 5.0), ("Suco", 3.0),
+]
+
+def seed_menu():
+    db = SessionLocal()
+    try:
+        if db.query(MenuItem).count() == 0:
+            for i, (name, price) in enumerate(DEFAULT_MENU):
+                db.add(MenuItem(name=name, price=price, sort_order=i))
+            db.commit()
+    finally:
+        db.close()
+
+seed_menu()
+
+def menu_item_dict(item):
+    return {"id": item.id, "name": item.name, "price": float(item.price)}
+
+def back_to_cantina(request: Request):
+    """Volta para a mesma tela (e o mesmo dia) de onde o usuário veio."""
+    path = "/"
+    ref = request.headers.get("referer")
+    if ref:
+        p = urlparse(ref)
+        path = p.path or "/"
+        if p.query:
+            path += "?" + p.query
+        if not path.startswith("/") or path.startswith("//"):
+            path = "/"
+    return RedirectResponse(url=path + "#pills-cantina", status_code=303)
 
 app = FastAPI(title="Finance API - Gestão de Cantina, Loja e Mensalidades")
 templates = Jinja2Templates(directory=APP_DIR / "templates")
@@ -85,7 +126,8 @@ def health_check():
 
 @app.get("/", response_class=HTMLResponse)
 def dashboard(
-    request: Request, 
+    request: Request,
+    dia: str | None = None,
     fees_auth: str | None = Cookie(default=None), 
     db: Session = Depends(get_db)
 ):
@@ -147,6 +189,28 @@ def dashboard(
             "consumptions": consumptions_list,
             "days": group_by_day(consumptions_list)
         })
+
+    # --- 1.1 COMANDA AO VIVO (apenas o dia escolhido; padrão = hoje) ---
+    today = datetime.now(BR_TZ).date()
+    try:
+        live_date = datetime.strptime(dia, "%Y-%m-%d").date() if dia else today
+    except ValueError:
+        live_date = today
+
+    live_consumptions = sorted(
+        [c for c in formatted_consumptions if extract_event_date(c["raw_items"]) == live_date],
+        key=lambda c: c["id"],
+        reverse=True,  # lançamentos mais recentes primeiro
+    )
+    live_total = sum(c["total_amount"] for c in live_consumptions)
+    live_pago = sum(c["total_amount"] for c in live_consumptions if c["status"] == "PAGO")
+    live_pendente = live_total - live_pago
+
+    menu_items = [
+        menu_item_dict(i)
+        for i in db.query(MenuItem).filter(MenuItem.active == True)
+                   .order_by(MenuItem.sort_order, MenuItem.id).all()
+    ]
 
     # --- 2. MENSALIDADES ---
     fees_total_geral = 0.0
@@ -228,7 +292,15 @@ def dashboard(
             "fees_total_pago": fees_total_pago,
             "fees_total_pendente": fees_total_pendente,
             "monthly_summary": monthly_summary,
-            "is_fees_authorized": is_fees_authorized
+            "is_fees_authorized": is_fees_authorized,
+            "live_date_iso": live_date.strftime("%Y-%m-%d"),
+            "live_label": live_date.strftime("%d/%m/%Y"),
+            "live_is_today": live_date == today,
+            "live_consumptions": live_consumptions,
+            "live_total": live_total,
+            "live_pago": live_pago,
+            "live_pendente": live_pendente,
+            "menu_items": menu_items,
         }
     )
 
@@ -265,9 +337,11 @@ def add_direct_consumption(
         date_obj = datetime.strptime(event_date, "%Y-%m-%d")
         full_date_str = date_obj.strftime("%d/%m/%Y")
         month_year_str = date_obj.strftime("%m/%Y")
+        back_url = f"/?dia={event_date}#pills-cantina"
     except ValueError:
         full_date_str = event_date
         month_year_str = event_date
+        back_url = "/#pills-cantina"
 
     batch = db.query(ImportBatch).filter(ImportBatch.month_year == month_year_str).first()
     if not batch:
@@ -300,7 +374,54 @@ def add_direct_consumption(
     )
     db.add(consumption)
     db.commit()
-    return RedirectResponse(url="/#pills-cantina", status_code=303)
+    return RedirectResponse(url=back_url, status_code=303)
+
+# --- CARDÁPIO (itens e preços da comanda ao vivo) ---
+
+@app.post("/menu-items")
+def add_menu_item(name: str = Form(...), price: float = Form(...), db: Session = Depends(get_db)):
+    name = name.strip()[:80]
+    if not name or price < 0:
+        raise HTTPException(status_code=400, detail="Informe um nome e um valor válidos.")
+    item = db.query(MenuItem).filter(func.lower(MenuItem.name) == name.lower()).first()
+    if item:
+        # Já existe (ou foi removido antes): atualiza o preço e reativa
+        item.price = price
+        item.active = True
+    else:
+        last = db.query(func.max(MenuItem.sort_order)).scalar() or 0
+        item = MenuItem(name=name, price=price, sort_order=last + 1)
+        db.add(item)
+    db.commit()
+    db.refresh(item)
+    return menu_item_dict(item)
+
+@app.post("/menu-items/{item_id}/update")
+def update_menu_item(item_id: int, name: str = Form(...), price: float = Form(...), db: Session = Depends(get_db)):
+    item = db.query(MenuItem).filter(MenuItem.id == item_id).first()
+    name = name.strip()[:80]
+    if not item:
+        raise HTTPException(status_code=404, detail="Item não encontrado.")
+    if not name or price < 0:
+        raise HTTPException(status_code=400, detail="Informe um nome e um valor válidos.")
+    clash = db.query(MenuItem).filter(
+        func.lower(MenuItem.name) == name.lower(), MenuItem.id != item_id, MenuItem.active == True
+    ).first()
+    if clash:
+        raise HTTPException(status_code=400, detail="Já existe um item com esse nome.")
+    item.name = name
+    item.price = price
+    db.commit()
+    return menu_item_dict(item)
+
+@app.post("/menu-items/{item_id}/delete")
+def delete_menu_item(item_id: int, db: Session = Depends(get_db)):
+    # Só desativa: as comandas antigas guardam o texto e não são afetadas
+    item = db.query(MenuItem).filter(MenuItem.id == item_id).first()
+    if item:
+        item.active = False
+        db.commit()
+    return {"ok": True}
 
 # --- ROTAS MENSALIDADES ---
 
@@ -348,24 +469,25 @@ def delete_batch(batch_id: int, db: Session = Depends(get_db)):
     return RedirectResponse(url="/#pills-cantina", status_code=303)
 
 @app.post("/consumptions/{item_id}/pay")
-def mark_as_paid(item_id: int, db: Session = Depends(get_db)):
+def mark_as_paid(item_id: int, request: Request, db: Session = Depends(get_db)):
     item = db.query(EventConsumption).filter(EventConsumption.id == item_id).first()
     if item:
         item.status = PaymentStatus.PAID
         db.commit()
-    return RedirectResponse(url="/#pills-cantina", status_code=303)
+    return back_to_cantina(request)
 
 @app.post("/consumptions/{item_id}/delete")
-def delete_consumption(item_id: int, db: Session = Depends(get_db)):
+def delete_consumption(item_id: int, request: Request, db: Session = Depends(get_db)):
     item = db.query(EventConsumption).filter(EventConsumption.id == item_id).first()
     if item:
         db.delete(item)
         db.commit()
-    return RedirectResponse(url="/#pills-cantina", status_code=303)
+    return back_to_cantina(request)
 
 @app.post("/consumptions/{item_id}/edit")
 def edit_consumption(
     item_id: int,
+    request: Request,
     person_name: str = Form(...),
     group: str = Form(...),
     category: str = Form("Cantina"),
@@ -388,7 +510,7 @@ def edit_consumption(
         item.total_amount = total_amount
         item.status = PaymentStatus.PAID if status == "PAGO" else PaymentStatus.PENDING
         db.commit()
-    return RedirectResponse(url="/#pills-cantina", status_code=303)
+    return back_to_cantina(request)
 
 @app.post("/upload-html")
 async def upload_html(

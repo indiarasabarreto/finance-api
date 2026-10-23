@@ -76,6 +76,62 @@
 </head>
 
 <body class="bg-light">
+{% macro cons_row(item) %}
+                                                    <tr>
+                                                        <td class="fw-bold">{{ item.person_name }}</td>
+                                                        <td>
+                                                            <span
+                                                                class="badge {% if item.category == 'Loja' %}bg-purple text-white{% elif item.category == 'Cantina - Loja' %}bg-primary text-white{% else %}bg-dark{% endif %}"
+                                                                {% if item.category=='Loja'
+                                                                %}style="background-color:#6f42c1;" {% endif %}>
+                                                                {{ item.category }}
+                                                            </span>
+                                                        </td>
+                                                        <td>
+                                                            <span
+                                                                class="badge {% if item.group == 'Filho da Casa' %}bg-info{% else %}bg-secondary{% endif %}">
+                                                                {{ item.group }}
+                                                            </span>
+                                                        </td>
+                                                        <td>{{ item.raw_items|sem_data }}</td>
+                                                        <td class="fw-bold">R$ {{ "%.2f"|format(item.total_amount) }}
+                                                        </td>
+                                                        <td>
+                                                            <span
+                                                                class="badge {% if item.status == 'PAGO' %}bg-success{% else %}bg-warning text-dark{% endif %}">
+                                                                {{ item.status }}
+                                                            </span>
+                                                        </td>
+                                                        <td class="text-center no-print">
+                                                            <div class="btn-group btn-group-sm">
+                                                                {% if item.status == 'PENDENTE' %}
+                                                                <form action="/consumptions/{{ item.id }}/pay"
+                                                                    method="post" class="d-inline">
+                                                                    <button type="submit"
+                                                                        class="btn btn-outline-success"
+                                                                        title="Dar Baixa (PAGO)">
+                                                                        <i class="bi bi-check-lg"></i>
+                                                                    </button>
+                                                                </form>
+                                                                {% endif %}
+                                                                <button type="button" class="btn btn-outline-primary"
+                                                                    data-item='{{ item|tojson|forceescape }}'
+                                                                    onclick="openEditModal(JSON.parse(this.dataset.item))"
+                                                                    title="Editar">
+                                                                    <i class="bi bi-pencil"></i>
+                                                                </button>
+                                                                <form action="/consumptions/{{ item.id }}/delete"
+                                                                    method="post" class="d-inline"
+                                                                    onsubmit="return confirm('Excluir este registro?')">
+                                                                    <button type="submit" class="btn btn-outline-danger"
+                                                                        title="Excluir">
+                                                                        <i class="bi bi-trash"></i>
+                                                                    </button>
+                                                                </form>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+{% endmacro %}
     <div class="container py-4">
         <!-- CABEÇALHO -->
         <div class="d-flex justify-content-between align-items-center mb-4">
@@ -120,23 +176,43 @@
             <!-- ABA 1: CANTINA E LOJA -->
             <div class="tab-pane fade show active" id="pills-cantina" role="tabpanel">
 
-                <div class="row g-3 mb-4">
-                    <div class="col-md-4">
-                        <div class="card border-0 shadow-sm bg-primary text-white p-3">
-                            <small class="text-white-50 fw-bold">CANTINA & LOJA — TOTAL GERAL</small>
-                            <h3 class="fw-bold m-0">R$ {{ "%.2f"|format(cantina_total_geral) }}</h3>
+
+                <ul class="nav nav-pills mb-3 no-print" id="cantinaSubTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active fw-bold me-2" id="sub-live-tab" data-bs-toggle="pill"
+                            data-bs-target="#sub-live" type="button" role="tab">
+                            <i class="bi bi-lightning-charge-fill me-1"></i> Comanda ao Vivo
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-bold" id="sub-history-tab" data-bs-toggle="pill"
+                            data-bs-target="#sub-history" type="button" role="tab">
+                            <i class="bi bi-archive me-1"></i> Histórico e Planilhas
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="cantinaSubContent">
+            <!-- SUB-ABA: COMANDA AO VIVO (só o dia de trabalho) -->
+            <div class="tab-pane fade show active" id="sub-live" role="tabpanel">
+
+                <div class="row g-3 mb-3">
+                    <div class="col-4">
+                        <div class="card border-0 shadow-sm bg-primary text-white p-2 px-3">
+                            <small class="text-white-50 fw-bold">TOTAL DO DIA</small>
+                            <h4 class="fw-bold m-0">R$ {{ "%.2f"|format(live_total) }}</h4>
                         </div>
                     </div>
-                    <div class="col-md-4">
-                        <div class="card border-0 shadow-sm bg-success text-white p-3">
-                            <small class="text-white-50 fw-bold">CANTINA & LOJA — RECEBIDO</small>
-                            <h3 class="fw-bold m-0">R$ {{ "%.2f"|format(cantina_total_pago) }}</h3>
+                    <div class="col-4">
+                        <div class="card border-0 shadow-sm bg-success text-white p-2 px-3">
+                            <small class="text-white-50 fw-bold">RECEBIDO</small>
+                            <h4 class="fw-bold m-0">R$ {{ "%.2f"|format(live_pago) }}</h4>
                         </div>
                     </div>
-                    <div class="col-md-4">
-                        <div class="card border-0 shadow-sm bg-warning text-dark p-3">
-                            <small class="text-dark-50 fw-bold">CANTINA & LOJA — PENDENTE</small>
-                            <h3 class="fw-bold m-0">R$ {{ "%.2f"|format(cantina_total_pendente) }}</h3>
+                    <div class="col-4">
+                        <div class="card border-0 shadow-sm bg-warning text-dark p-2 px-3">
+                            <small class="fw-bold">PENDENTE</small>
+                            <h4 class="fw-bold m-0">R$ {{ "%.2f"|format(live_pendente) }}</h4>
                         </div>
                     </div>
                 </div>
@@ -153,53 +229,52 @@
                     </div>
 
                     <div class="mb-3 p-3 bg-light rounded-3 border">
-                        <small class="text-muted fw-bold d-block mb-2"><i
-                                class="bi bi-lightning-charge-fill text-warning me-1"></i> Clique nos itens para
-                            adicionar ao pedido:</small>
-                        <div class="d-flex flex-wrap gap-2">
-                            <button type="button" class="btn btn-sm btn-outline-dark fw-semibold bg-white"
-                                onclick="addItemQuick('Torta de Atum', 12.00)">
-                                Torta de Atum <span class="badge bg-success ms-1">R$ 12</span>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <small class="text-muted fw-bold"><i
+                                    class="bi bi-lightning-charge-fill text-warning me-1"></i> Clique nos itens para
+                                adicionar ao pedido:</small>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal"
+                                data-bs-target="#menuModal">
+                                <i class="bi bi-sliders me-1"></i> Gerenciar cardápio
                             </button>
-                            <button type="button" class="btn btn-sm btn-outline-dark fw-semibold bg-white"
-                                onclick="addItemQuick('Torta de Frango', 12.00)">
-                                Torta de Frango <span class="badge bg-success ms-1">R$ 12</span>
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-dark fw-semibold bg-white"
-                                onclick="addItemQuick('Empada', 9.00)">
-                                Empada <span class="badge bg-success ms-1">R$ 9</span>
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-dark fw-semibold bg-white"
-                                onclick="addItemQuick('Bolo', 5.00)">
-                                Bolo <span class="badge bg-success ms-1">R$ 5</span>
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-dark fw-semibold bg-white"
-                                onclick="addItemQuick('Pudim', 5.00)">
-                                Pudim <span class="badge bg-success ms-1">R$ 5</span>
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-dark fw-semibold bg-white"
-                                onclick="addItemQuick('Mousse', 5.00)">
-                                Mousse <span class="badge bg-success ms-1">R$ 5</span>
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-dark fw-semibold bg-white"
-                                onclick="addItemQuick('Refrigerante', 5.00)">
-                                Refrigerante <span class="badge bg-success ms-1">R$ 5</span>
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-dark fw-semibold bg-white"
-                                onclick="addItemQuick('Café', 5.00)">
-                                Café <span class="badge bg-success ms-1">R$ 5</span>
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-dark fw-semibold bg-white"
-                                onclick="addItemQuick('Suco', 3.00)">
-                                Suco <span class="badge bg-success ms-1">R$ 3</span>
-                            </button>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2 mb-3" id="liveMenuButtons"></div>
+
+                        <div class="border-top pt-2">
+                            <small class="text-muted fw-bold d-block mb-2"><i
+                                    class="bi bi-plus-circle-fill text-success me-1"></i> Item novo ou fora do
+                                cardápio:</small>
+                            <div class="row g-2 align-items-center">
+                                <div class="col-sm-4">
+                                    <input type="text" id="avulsoName" class="form-control form-control-sm"
+                                        placeholder="Nome do item (ex: Tintura)">
+                                </div>
+                                <div class="col-sm-2">
+                                    <input type="number" step="0.01" min="0" id="avulsoPrice"
+                                        class="form-control form-control-sm" placeholder="Valor R$">
+                                </div>
+                                <div class="col-sm-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="avulsoSave" checked>
+                                        <label class="form-check-label small" for="avulsoSave">Salvar no
+                                            cardápio</label>
+                                    </div>
+                                </div>
+                                <div class="col-sm-3">
+                                    <button type="button" class="btn btn-sm btn-success fw-bold w-100"
+                                        onclick="addAvulso()">
+                                        <i class="bi bi-plus-lg me-1"></i> Adicionar ao pedido
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
                     <form action="/consumptions/direct-add" method="post" class="row g-2">
                         <div class="col-md-2">
                             <label class="form-label small text-muted fw-bold mb-1">Data do Dia</label>
-                            <input type="date" id="event_date_input" name="event_date" class="form-control" required>
+                            <input type="date" id="event_date_input" name="event_date" class="form-control"
+                                value="{{ live_date_iso }}" required>
                         </div>
                         <div class="col-md-2">
                             <label class="form-label small text-muted fw-bold mb-1">Nome Cliente</label>
@@ -244,6 +319,79 @@
                             </button>
                         </div>
                     </form>
+                </div>
+
+                <!-- Comanda do dia -->
+                <div class="card border-0 shadow-sm p-3 mb-4">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                        <h5 class="m-0 fw-bold text-primary">
+                            <i class="bi bi-receipt me-1"></i> Comanda de {{ live_label }}
+                            {% if live_is_today %}<span class="badge bg-success ms-1">Hoje</span>{% endif %}
+                            <span class="badge bg-secondary ms-1">{{ live_consumptions|length }} lançamentos</span>
+                        </h5>
+                        <div class="d-flex align-items-center gap-2 no-print">
+                            <label class="small text-muted fw-bold m-0" for="liveDayPicker">Ver outro dia:</label>
+                            <input type="date" id="liveDayPicker" class="form-control form-control-sm w-auto"
+                                value="{{ live_date_iso }}"
+                                onchange="if(this.value){window.location='/?dia='+this.value+'#pills-cantina';}">
+                            {% if not live_is_today %}
+                            <a href="/#pills-cantina" class="btn btn-sm btn-outline-primary">Voltar para hoje</a>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if live_consumptions %}
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>NOME</th>
+                                    <th>ORIGEM</th>
+                                    <th>GRUPO</th>
+                                    <th>ITENS CONSUMIDOS</th>
+                                    <th>VALOR (R$)</th>
+                                    <th>SITUAÇÃO</th>
+                                    <th class="text-center no-print">AÇÕES</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in live_consumptions %}
+                                {{ cons_row(item) }}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-receipt display-6"></i>
+                        <p class="m-0 mt-2">Nenhum lançamento neste dia ainda.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- SUB-ABA: HISTÓRICO (meses e giras antigas, tudo recolhido) -->
+            <div class="tab-pane fade" id="sub-history" role="tabpanel">
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <div class="card border-0 shadow-sm bg-primary text-white p-3">
+                            <small class="text-white-50 fw-bold">CANTINA & LOJA — TOTAL GERAL</small>
+                            <h3 class="fw-bold m-0">R$ {{ "%.2f"|format(cantina_total_geral) }}</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card border-0 shadow-sm bg-success text-white p-3">
+                            <small class="text-white-50 fw-bold">CANTINA & LOJA — RECEBIDO</small>
+                            <h3 class="fw-bold m-0">R$ {{ "%.2f"|format(cantina_total_pago) }}</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card border-0 shadow-sm bg-warning text-dark p-3">
+                            <small class="text-dark-50 fw-bold">CANTINA & LOJA — PENDENTE</small>
+                            <h3 class="fw-bold m-0">R$ {{ "%.2f"|format(cantina_total_pendente) }}</h3>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Formulário de Upload de Planilha Fechada -->
@@ -325,7 +473,7 @@
                     {% set month_index = loop.index %}
                     <div class="accordion-item border-0 shadow-sm mb-3 rounded-3 overflow-hidden">
                         <h2 class="accordion-header">
-                            <button class="accordion-button {% if not loop.first %}collapsed{% endif %} bg-white py-3"
+                            <button class="accordion-button collapsed bg-white py-3"
                                 type="button" data-bs-toggle="collapse" data-bs-target="#folder{{ month_index }}">
                                 <div class="d-flex justify-content-between align-items-center w-100 me-3">
                                     <div>
@@ -345,7 +493,7 @@
                             </button>
                         </h2>
                         <div id="folder{{ month_index }}"
-                            class="accordion-collapse collapse {% if loop.first %}show{% endif %}"
+                            class="accordion-collapse collapse" data-month="{{ folder.month_year }}"
                             data-bs-parent="#foldersAccordion">
                             <div class="accordion-body bg-light pt-3 pb-4">
 
@@ -401,60 +549,7 @@
                                                 </thead>
                                                 <tbody>
                                                     {% for item in day.consumptions %}
-                                                    <tr>
-                                                        <td class="fw-bold">{{ item.person_name }}</td>
-                                                        <td>
-                                                            <span
-                                                                class="badge {% if item.category == 'Loja' %}bg-purple text-white{% elif item.category == 'Cantina - Loja' %}bg-primary text-white{% else %}bg-dark{% endif %}"
-                                                                {% if item.category=='Loja'
-                                                                %}style="background-color:#6f42c1;" {% endif %}>
-                                                                {{ item.category }}
-                                                            </span>
-                                                        </td>
-                                                        <td>
-                                                            <span
-                                                                class="badge {% if item.group == 'Filho da Casa' %}bg-info{% else %}bg-secondary{% endif %}">
-                                                                {{ item.group }}
-                                                            </span>
-                                                        </td>
-                                                        <td>{{ item.raw_items|sem_data }}</td>
-                                                        <td class="fw-bold">R$ {{ "%.2f"|format(item.total_amount) }}
-                                                        </td>
-                                                        <td>
-                                                            <span
-                                                                class="badge {% if item.status == 'PAGO' %}bg-success{% else %}bg-warning text-dark{% endif %}">
-                                                                {{ item.status }}
-                                                            </span>
-                                                        </td>
-                                                        <td class="text-center no-print">
-                                                            <div class="btn-group btn-group-sm">
-                                                                {% if item.status == 'PENDENTE' %}
-                                                                <form action="/consumptions/{{ item.id }}/pay"
-                                                                    method="post" class="d-inline">
-                                                                    <button type="submit"
-                                                                        class="btn btn-outline-success"
-                                                                        title="Dar Baixa (PAGO)">
-                                                                        <i class="bi bi-check-lg"></i>
-                                                                    </button>
-                                                                </form>
-                                                                {% endif %}
-                                                                <button type="button" class="btn btn-outline-primary"
-                                                                    data-item='{{ item|tojson|forceescape }}'
-                                                                    onclick="openEditModal(JSON.parse(this.dataset.item))"
-                                                                    title="Editar">
-                                                                    <i class="bi bi-pencil"></i>
-                                                                </button>
-                                                                <form action="/consumptions/{{ item.id }}/delete"
-                                                                    method="post" class="d-inline"
-                                                                    onsubmit="return confirm('Excluir este registro?')">
-                                                                    <button type="submit" class="btn btn-outline-danger"
-                                                                        title="Excluir">
-                                                                        <i class="bi bi-trash"></i>
-                                                                    </button>
-                                                                </form>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
+                                                    {{ cons_row(item) }}
                                                     {% endfor %}
                                                 </tbody>
                                             </table>
@@ -468,6 +563,9 @@
                     {% endfor %}
                 </div>
                 {% endif %}
+
+            </div>
+                </div>
             </div>
             <!-- ABA 2: MENSALIDADES (ÁREA RESTRITA) -->
             <div class="tab-pane fade" id="pills-fees" role="tabpanel">
@@ -788,36 +886,7 @@
                                     <i class="bi bi-trash me-1"></i> Limpar Itens
                                 </button>
                             </div>
-                            <div class="d-flex flex-wrap gap-1">
-                                <button type="button" class="btn btn-xs btn-outline-dark fw-semibold bg-white py-1 px-2"
-                                    style="font-size: 0.8rem;" onclick="addItemQuickEdit('Torta de Atum', 12.00)">+
-                                    Torta Atum (R$12)</button>
-                                <button type="button" class="btn btn-xs btn-outline-dark fw-semibold bg-white py-1 px-2"
-                                    style="font-size: 0.8rem;" onclick="addItemQuickEdit('Torta de Frango', 12.00)">+
-                                    Torta Frango (R$12)</button>
-                                <button type="button" class="btn btn-xs btn-outline-dark fw-semibold bg-white py-1 px-2"
-                                    style="font-size: 0.8rem;" onclick="addItemQuickEdit('Empada', 9.00)">+ Empada
-                                    (R$9)</button>
-                                <button type="button" class="btn btn-xs btn-outline-dark fw-semibold bg-white py-1 px-2"
-                                    style="font-size: 0.8rem;" onclick="addItemQuickEdit('Bolo', 5.00)">+ Bolo
-                                    (R$5)</button>
-                                <button type="button" class="btn btn-xs btn-outline-dark fw-semibold bg-white py-1 px-2"
-                                    style="font-size: 0.8rem;" onclick="addItemQuickEdit('Pudim', 5.00)">+ Pudim
-                                    (R$5)</button>
-                                <button type="button" class="btn btn-xs btn-outline-dark fw-semibold bg-white py-1 px-2"
-                                    style="font-size: 0.8rem;" onclick="addItemQuickEdit('Mousse', 5.00)">+ Mousse
-                                    (R$5)</button>
-                                <button type="button" class="btn btn-xs btn-outline-dark fw-semibold bg-white py-1 px-2"
-                                    style="font-size: 0.8rem;" onclick="addItemQuickEdit('Refrigerante', 5.00)">+
-                                    Refri
-                                    (R$5)</button>
-                                <button type="button" class="btn btn-xs btn-outline-dark fw-semibold bg-white py-1 px-2"
-                                    style="font-size: 0.8rem;" onclick="addItemQuickEdit('Café', 5.00)">+ Café
-                                    (R$5)</button>
-                                <button type="button" class="btn btn-xs btn-outline-dark fw-semibold bg-white py-1 px-2"
-                                    style="font-size: 0.8rem;" onclick="addItemQuickEdit('Suco', 3.00)">+ Suco
-                                    (R$3)</button>
-                            </div>
+                            <div class="d-flex flex-wrap gap-1" id="editMenuButtons"></div>
                         </div>
 
                         <div class="mb-3">
@@ -848,6 +917,37 @@
                         <button type="submit" class="btn btn-primary fw-bold">Salvar Alterações</button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: CARDÁPIO / PREÇOS -->
+    <div class="modal fade" id="menuModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-sliders me-2"></i>Cardápio e preços</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <small class="text-muted d-block mb-3">Mude o preço e clique em <i
+                            class="bi bi-check-lg text-success"></i> para salvar. Remover um item não altera
+                        comandas antigas.</small>
+                    <div id="menuList"></div>
+                    <hr>
+                    <label class="form-label fw-bold small">Adicionar item novo</label>
+                    <div class="input-group">
+                        <input type="text" id="newMenuName" class="form-control" placeholder="Nome">
+                        <input type="number" step="0.01" min="0" id="newMenuPrice" class="form-control"
+                            placeholder="Valor R$" style="max-width:120px;">
+                        <button type="button" class="btn btn-success" onclick="addMenuFromModal()">
+                            <i class="bi bi-plus-lg"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                </div>
             </div>
         </div>
     </div>
@@ -918,11 +1018,6 @@
         }
 
         document.addEventListener("DOMContentLoaded", function () {
-            var dateInput = document.getElementById('event_date_input');
-            if (dateInput) {
-                var today = new Date().toISOString().split('T')[0];
-                dateInput.value = today;
-            }
 
             var hash = window.location.hash;
             if (hash === "#pills-fees") {
@@ -938,6 +1033,173 @@
                     tab.show();
                 }
             }
+        });
+
+        // ================= CARDÁPIO DINÂMICO =================
+        var MENU = {{ menu_items|tojson }};
+
+        function brl(v) {
+            return Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+        }
+
+        async function api(url, data) {
+            var fd = new FormData();
+            Object.keys(data || {}).forEach(function (k) { fd.append(k, data[k]); });
+            var r = await fetch(url, { method: 'POST', body: fd });
+            if (!r.ok) {
+                var e = {};
+                try { e = await r.json(); } catch (_) { }
+                throw new Error(e.detail || 'Não foi possível salvar. Tente novamente.');
+            }
+            return r.json();
+        }
+
+        function fillButtons(boxId, handler, small) {
+            var box = document.getElementById(boxId);
+            if (!box) return;
+            box.innerHTML = '';
+            MENU.forEach(function (it) {
+                var b = document.createElement('button');
+                b.type = 'button';
+                b.className = 'btn btn-sm btn-outline-dark fw-semibold bg-white' + (small ? ' py-1 px-2' : '');
+                b.appendChild(document.createTextNode(it.name + ' '));
+                var s = document.createElement('span');
+                s.className = 'badge bg-success ms-1';
+                s.textContent = 'R$ ' + brl(it.price);
+                b.appendChild(s);
+                b.addEventListener('click', function () { handler(it.name, it.price); });
+                box.appendChild(b);
+            });
+        }
+
+        function renderMenuList() {
+            var box = document.getElementById('menuList');
+            if (!box) return;
+            box.innerHTML = '';
+            MENU.forEach(function (it) {
+                var g = document.createElement('div');
+                g.className = 'input-group mb-2';
+
+                var n = document.createElement('input');
+                n.type = 'text'; n.className = 'form-control'; n.value = it.name;
+
+                var p = document.createElement('input');
+                p.type = 'number'; p.step = '0.01'; p.min = '0';
+                p.className = 'form-control'; p.style.maxWidth = '110px'; p.value = it.price;
+
+                var save = document.createElement('button');
+                save.type = 'button'; save.className = 'btn btn-outline-success';
+                save.title = 'Salvar'; save.innerHTML = '<i class="bi bi-check-lg"></i>';
+                save.addEventListener('click', async function () {
+                    try {
+                        var upd = await api('/menu-items/' + it.id + '/update', { name: n.value, price: p.value });
+                        MENU = MENU.map(function (m) { return m.id === upd.id ? upd : m; });
+                        renderMenu();
+                    } catch (e) { alert(e.message); }
+                });
+
+                var del = document.createElement('button');
+                del.type = 'button'; del.className = 'btn btn-outline-danger';
+                del.title = 'Remover do cardápio'; del.innerHTML = '<i class="bi bi-trash"></i>';
+                del.addEventListener('click', async function () {
+                    if (!confirm('Remover "' + it.name + '" do cardápio?')) return;
+                    try {
+                        await api('/menu-items/' + it.id + '/delete');
+                        MENU = MENU.filter(function (m) { return m.id !== it.id; });
+                        renderMenu();
+                    } catch (e) { alert(e.message); }
+                });
+
+                g.appendChild(n); g.appendChild(p); g.appendChild(save); g.appendChild(del);
+                box.appendChild(g);
+            });
+        }
+
+        function renderMenu() {
+            fillButtons('liveMenuButtons', addItemQuick, false);
+            fillButtons('editMenuButtons', addItemQuickEdit, true);
+            renderMenuList();
+        }
+
+        async function saveMenuItem(name, price) {
+            var it = await api('/menu-items', { name: name, price: price });
+            var i = MENU.findIndex(function (m) { return m.id === it.id; });
+            if (i >= 0) { MENU[i] = it; } else { MENU.push(it); }
+            renderMenu();
+            return it;
+        }
+
+        async function addAvulso() {
+            var nameEl = document.getElementById('avulsoName');
+            var priceEl = document.getElementById('avulsoPrice');
+            var name = nameEl.value.trim();
+            var price = parseFloat(priceEl.value);
+            if (!name || isNaN(price) || price < 0) {
+                alert('Informe o nome e o valor do item.');
+                return;
+            }
+            addItemQuick(name, price);
+            if (document.getElementById('avulsoSave').checked) {
+                try { await saveMenuItem(name, price); } catch (e) { alert(e.message); }
+            }
+            nameEl.value = ''; priceEl.value = '';
+            nameEl.focus();
+        }
+
+        async function addMenuFromModal() {
+            var nameEl = document.getElementById('newMenuName');
+            var priceEl = document.getElementById('newMenuPrice');
+            var name = nameEl.value.trim();
+            var price = parseFloat(priceEl.value);
+            if (!name || isNaN(price) || price < 0) {
+                alert('Informe o nome e o valor do item.');
+                return;
+            }
+            try {
+                await saveMenuItem(name, price);
+                nameEl.value = ''; priceEl.value = '';
+            } catch (e) { alert(e.message); }
+        }
+
+        // ================= SUB-ABAS E PASTAS (lembra onde você estava) =================
+        document.addEventListener('DOMContentLoaded', function () {
+            renderMenu();
+
+            ['avulsoName', 'avulsoPrice'].forEach(function (id) {
+                var el = document.getElementById(id);
+                if (el) el.addEventListener('keydown', function (ev) {
+                    if (ev.key === 'Enter') { ev.preventDefault(); addAvulso(); }
+                });
+            });
+
+            // Sub-aba: ao abrir direto a Cantina, mostra a que foi usada por último
+            try {
+                var hash = window.location.hash;
+                var saved = localStorage.getItem('cantinaSubTab');
+                if ((hash === '' || hash === '#pills-cantina') && saved === 'sub-history-tab') {
+                    new bootstrap.Tab(document.getElementById('sub-history-tab')).show();
+                }
+                document.querySelectorAll('#cantinaSubTabs button').forEach(function (btn) {
+                    btn.addEventListener('shown.bs.tab', function () {
+                        localStorage.setItem('cantinaSubTab', btn.id);
+                    });
+                });
+                // Pasta do mês aberta por último no histórico
+                var openMonth = localStorage.getItem('openMonthFolder');
+                document.querySelectorAll('#foldersAccordion .accordion-collapse').forEach(function (el) {
+                    if (openMonth && el.dataset.month === openMonth) {
+                        new bootstrap.Collapse(el, { toggle: true });
+                    }
+                    el.addEventListener('shown.bs.collapse', function (ev) {
+                        if (ev.target === el) localStorage.setItem('openMonthFolder', el.dataset.month);
+                    });
+                    el.addEventListener('hidden.bs.collapse', function (ev) {
+                        if (ev.target === el && localStorage.getItem('openMonthFolder') === el.dataset.month) {
+                            localStorage.removeItem('openMonthFolder');
+                        }
+                    });
+                });
+            } catch (_) { /* localStorage indisponível: segue sem lembrar */ }
         });
     </script>
 </body>
