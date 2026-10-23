@@ -65,6 +65,9 @@ templates = Jinja2Templates(directory=APP_DIR / "templates")
 # Senha de Acesso para a Aba de Mensalidades (Padrão: 9090)
 MONTHLY_FEES_PIN = os.getenv("MONTHLY_FEES_PIN", "9090")
 
+# Senha da sub-aba "Histórico e Planilhas" (se HISTORY_PIN não for definida, usa a mesma das mensalidades)
+HISTORY_PIN = os.getenv("HISTORY_PIN", MONTHLY_FEES_PIN)
+
 # LISTA OFICIAL DE MEMBROS (INCLUINDO OS NOVOS INTEGANTES E O GRUPO FAMÍLIA)
 MEMBERS_CONFIG = [
     {"name": "Eliana", "amount": 90.0},
@@ -128,10 +131,13 @@ def health_check():
 def dashboard(
     request: Request,
     dia: str | None = None,
-    fees_auth: str | None = Cookie(default=None), 
+    pin_erro: str | None = None,
+    fees_auth: str | None = Cookie(default=None),
+    history_auth: str | None = Cookie(default=None), 
     db: Session = Depends(get_db)
 ):
     is_fees_authorized = (fees_auth == "authorized")
+    history_authorized = (history_auth == "authorized")
 
     raw_consumptions = db.query(EventConsumption).all()
     batches = db.query(ImportBatch).order_by(ImportBatch.created_at.desc()).all()
@@ -293,6 +299,8 @@ def dashboard(
             "fees_total_pendente": fees_total_pendente,
             "monthly_summary": monthly_summary,
             "is_fees_authorized": is_fees_authorized,
+            "history_authorized": history_authorized,
+            "pin_erro": bool(pin_erro),
             "live_date_iso": live_date.strftime("%Y-%m-%d"),
             "live_label": live_date.strftime("%d/%m/%Y"),
             "live_is_today": live_date == today,
@@ -318,6 +326,22 @@ def monthly_fees_login(pin: str = Form(...)):
 def monthly_fees_logout(response: Response):
     response = RedirectResponse(url="/#pills-cantina", status_code=303)
     response.delete_cookie("fees_auth")
+    return response
+
+# --- AUTENTICAÇÃO HISTÓRICO E PLANILHAS ---
+
+@app.post("/history/login")
+def history_login(pin: str = Form(...)):
+    if pin == HISTORY_PIN:
+        response = RedirectResponse(url="/#pills-cantina", status_code=303)
+        response.set_cookie(key="history_auth", value="authorized", max_age=2592000, httponly=True)
+        return response
+    return RedirectResponse(url="/?pin_erro=1#pills-cantina", status_code=303)
+
+@app.post("/history/logout")
+def history_logout():
+    response = RedirectResponse(url="/#pills-cantina", status_code=303)
+    response.delete_cookie("history_auth")
     return response
 
 # --- LANÇAMENTO DIRETO AO VIVO ---
@@ -527,7 +551,10 @@ async def upload_html(
     return RedirectResponse(url="/#pills-cantina", status_code=303)
 
 @app.get("/export-excel")
-def export_excel(db: Session = Depends(get_db)):
+def export_excel(history_auth: str | None = Cookie(default=None), db: Session = Depends(get_db)):
+    # A planilha contém todo o histórico: só com a senha do histórico
+    if history_auth != "authorized":
+        return RedirectResponse(url="/?pin_erro=1#pills-cantina", status_code=303)
     consumptions = db.query(EventConsumption).all()
     data = []
 

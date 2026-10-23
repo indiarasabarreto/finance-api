@@ -372,6 +372,46 @@
 
             <!-- SUB-ABA: HISTÓRICO (meses e giras antigas, tudo recolhido) -->
             <div class="tab-pane fade" id="sub-history" role="tabpanel">
+                {% if not history_authorized %}
+                <!-- Login do Histórico -->
+                <div class="row justify-content-center py-5">
+                    <div class="col-md-5">
+                        <div class="card border-0 shadow-sm text-center p-4">
+                            <div class="mb-3"><i class="bi bi-shield-lock-fill text-primary display-3"></i></div>
+                            <h4 class="fw-bold text-dark mb-2">Área Restrita — Histórico</h4>
+                            <p class="text-muted small mb-4">O histórico, as planilhas e os totais gerais são
+                                reservados aos gestores autorizados. Digite a senha para continuar.</p>
+                            {% if pin_erro %}
+                            <div class="alert alert-danger py-2 small fw-bold">PIN incorreto. Tente novamente.</div>
+                            {% endif %}
+                            <form action="/history/login" method="post">
+                                <div class="mb-3">
+                                    <input type="password" name="pin"
+                                        class="form-control form-control-lg text-center fw-bold"
+                                        placeholder="Digite o PIN de Acesso" required autofocus>
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-lg fw-bold w-100 mb-2">
+                                    <i class="bi bi-unlock me-1"></i> Liberar Acesso
+                                </button>
+                            </form>
+                            <button type="button" class="btn btn-link text-secondary text-decoration-none fw-semibold"
+                                onclick="new bootstrap.Tab(document.getElementById('sub-live-tab')).show()">
+                                <i class="bi bi-arrow-left me-1"></i> Voltar para a Comanda ao Vivo
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="d-flex justify-content-between align-items-center mb-3 no-print">
+                    <span class="badge bg-success px-3 py-2 fs-6"><i class="bi bi-shield-check me-1"></i> Acesso
+                        Gestor Liberado</span>
+                    <form action="/history/logout" method="post"
+                        onsubmit="try{localStorage.setItem('cantinaSubTab','sub-live-tab')}catch(e){}">
+                        <button type="submit" class="btn btn-sm btn-outline-secondary fw-bold">
+                            <i class="bi bi-lock me-1"></i> Bloquear Histórico
+                        </button>
+                    </form>
+                </div>
 
                 <div class="row g-3 mb-4">
                     <div class="col-md-4">
@@ -562,6 +602,7 @@
                     </div>
                     {% endfor %}
                 </div>
+                {% endif %}
                 {% endif %}
 
             </div>
