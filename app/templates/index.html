@@ -9,6 +9,8 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
     <style>
+        .cat-toggle .btn-loja { color: #6f42c1; border-color: #6f42c1; background: #fff; }
+        .cat-toggle .btn-loja.active, .cat-toggle .btn-loja:hover { background: #6f42c1; color: #fff; }
         .nav-pills .nav-link {
             font-size: 1.05rem;
             padding: 10px 18px;
@@ -76,6 +78,29 @@
 </head>
 
 <body class="bg-light">
+{% macro relock_card(box_id, action, title, on_submit='') %}
+<div id="{{ box_id }}" class="d-none">
+    <div class="row justify-content-center py-5">
+        <div class="col-md-5">
+            <div class="card border-0 shadow-sm text-center p-4">
+                <div class="mb-3"><i class="bi bi-shield-lock-fill text-primary display-3"></i></div>
+                <h4 class="fw-bold text-dark mb-2">{{ title }}</h4>
+                <p class="text-muted small mb-4">Por segurança, o acesso foi bloqueado ao sair desta aba.
+                    Digite a senha para continuar.</p>
+                <form action="{{ action }}" method="post" onsubmit="{{ on_submit }}">
+                    <div class="mb-3">
+                        <input type="password" name="pin" class="form-control form-control-lg text-center fw-bold"
+                            placeholder="Digite o PIN de Acesso" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-lg fw-bold w-100">
+                        <i class="bi bi-unlock me-1"></i> Liberar Acesso
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endmacro %}
 {% macro cons_row(item) %}
                                                     <tr>
                                                         <td class="fw-bold">{{ item.person_name }}</td>
@@ -238,6 +263,12 @@
                                 <i class="bi bi-sliders me-1"></i> Gerenciar cardápio
                             </button>
                         </div>
+                        <div class="btn-group cat-toggle mb-2" role="group" aria-label="Tipo de item">
+                            <button type="button" id="catBtnCantina" class="btn btn-outline-dark fw-bold active"
+                                onclick="setLiveCat('Cantina')"><i class="bi bi-cup-hot me-1"></i> Cantina</button>
+                            <button type="button" id="catBtnLoja" class="btn btn-loja fw-bold"
+                                onclick="setLiveCat('Loja')"><i class="bi bi-bag me-1"></i> Loja</button>
+                        </div>
                         <div class="d-flex flex-wrap gap-2 mb-3" id="liveMenuButtons"></div>
 
                         <div class="border-top pt-2">
@@ -283,7 +314,7 @@
                         </div>
                         <div class="col-md-2">
                             <label class="form-label small text-muted fw-bold mb-1">Origem</label>
-                            <select name="category" class="form-select">
+                            <select id="live_category" name="category" class="form-select">
                                 <option value="Cantina">Cantina</option>
                                 <option value="Loja">Loja</option>
                                 <option value="Cantina - Loja">Cantina - Loja</option>
@@ -402,6 +433,7 @@
                     </div>
                 </div>
                 {% else %}
+                <div id="historyContent">
                 <div class="d-flex justify-content-between align-items-center mb-3 no-print">
                     <span class="badge bg-success px-3 py-2 fs-6"><i class="bi bi-shield-check me-1"></i> Acesso
                         Gestor Liberado</span>
@@ -603,6 +635,8 @@
                     {% endfor %}
                 </div>
                 {% endif %}
+                </div>
+                {{ relock_card('historyRelock', '/history/login', 'Área Restrita — Histórico', "try{localStorage.setItem('cantinaSubTab','sub-history-tab')}catch(e){}") }}
                 {% endif %}
 
             </div>
@@ -642,6 +676,7 @@
                     </div>
                 </div>
                 {% else %}
+                <div id="feesContent">
                 <!-- Conteúdo Liberado -->
                 <div class="d-flex justify-content-between align-items-center mb-3 no-print">
                     <div>
@@ -686,11 +721,16 @@
                         Folha
                         de Mensalidades do Mês</h5>
                     <form action="/monthly-fees/generate" method="post" class="row g-2">
-                        <div class="col-md-6">
+                        <div class="col-md-3">
+                            <input type="number" step="0.01" min="0" name="base_amount" class="form-control"
+                                value="90" title="Valor mensal por integrante (R$)"
+                                placeholder="Valor mensal (R$)" required>
+                        </div>
+                        <div class="col-md-4">
                             <input type="text" name="month_year" class="form-control"
                                 placeholder="Mês/Ano (Ex: 09/2026)" required>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-5">
                             <button type="submit" class="btn btn-primary fw-bold w-100">
                                 <i class="bi bi-plus-circle me-1"></i> Criar Folha de Mensalidades do Mês
                             </button>
@@ -752,7 +792,9 @@
                                         <thead class="table-light">
                                             <tr>
                                                 <th>NOME DO MEMBRO</th>
-                                                <th>VALOR FIXO</th>
+                                                <th>VALOR MENSAL</th>
+                                                <th>PAGO</th>
+                                                <th>FALTA</th>
                                                 <th>SITUAÇÃO</th>
                                                 <th class="text-center no-print">AÇÃO</th>
                                             </tr>
@@ -761,28 +803,29 @@
                                             {% for item in folder.fees %}
                                             <tr>
                                                 <td class="fw-bold">{{ item.person_name }}</td>
-                                                <td class="fw-bold text-secondary">R$ {{ "%.2f"|format(item.amount)
-                                                    }}
-                                                </td>
+                                                <td class="fw-bold text-secondary">R$ {{ "%.2f"|format(item.amount) }}</td>
+                                                <td class="fw-bold text-success">R$ {{ "%.2f"|format(item.paid) }}</td>
+                                                <td class="fw-bold {% if item.remaining > 0 %}text-danger{% else %}text-muted{% endif %}">R$ {{ "%.2f"|format(item.remaining) }}</td>
                                                 <td>
-                                                    <span
-                                                        class="badge {% if item.status == 'PAGO' %}bg-success{% else %}bg-danger{% endif %}">
+                                                    <span class="badge {% if item.status == 'PAGO' %}bg-success{% elif item.status == 'PARCIAL' %}bg-warning text-dark{% else %}bg-danger{% endif %}">
                                                         {{ item.status }}
                                                     </span>
                                                 </td>
-                                                <td class="text-center no-print">
-                                                    <form action="/monthly-fees/{{ item.id }}/pay" method="post"
-                                                        class="d-inline">
+                                                <td class="text-center no-print text-nowrap">
+                                                    <form action="/monthly-fees/{{ item.id }}/pay" method="post" class="d-inline">
                                                         <button type="submit"
                                                             class="btn btn-sm {% if item.status == 'PAGO' %}btn-outline-warning{% else %}btn-success{% endif %} fw-bold">
                                                             {% if item.status == 'PAGO' %}
                                                             <i class="bi bi-arrow-counterclockwise"></i> Desfazer
-                                                            Baixa
                                                             {% else %}
-                                                            <i class="bi bi-check-lg"></i> Dar Baixa (PAGO)
+                                                            <i class="bi bi-check-lg"></i> Pago total
                                                             {% endif %}
                                                         </button>
                                                     </form>
+                                                    <button type="button" class="btn btn-sm btn-outline-primary fw-bold ms-1"
+                                                        onclick='openFeeModal({{ item|tojson }})'>
+                                                        <i class="bi bi-sliders"></i> Baixa / Valor
+                                                    </button>
                                                 </td>
                                             </tr>
                                             {% endfor %}
@@ -795,6 +838,8 @@
                     {% endfor %}
                 </div>
                 {% endif %}
+                </div>
+                {{ relock_card('feesRelock', '/monthly-fees/login', 'Área Restrita — Mensalidades') }}
                 {% endif %}
             </div>
 
@@ -831,6 +876,7 @@
                     </div>
                 </div>
                 {% else %}
+                <div id="summaryContent">
                 <!-- Conteúdo Liberado -->
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h4 class="fw-bold text-dark m-0"><i class="bi bi-graph-up-arrow text-primary me-2"></i>Resumo
@@ -881,6 +927,8 @@
                     </div>
                 </div>
                 {% endif %}
+                </div>
+                {{ relock_card('summaryRelock', '/monthly-fees/login', 'Área Restrita — Resumo') }}
                 {% endif %}
             </div>
         </div>
@@ -927,7 +975,10 @@
                                     <i class="bi bi-trash me-1"></i> Limpar Itens
                                 </button>
                             </div>
-                            <div class="d-flex flex-wrap gap-1" id="editMenuButtons"></div>
+                            <div class="mb-1"><small class="text-muted fw-bold">Cantina</small></div>
+                            <div class="d-flex flex-wrap gap-1 mb-2" id="editMenuCantina"></div>
+                            <div class="mb-1"><small class="fw-bold" style="color:#6f42c1;">Loja</small></div>
+                            <div class="d-flex flex-wrap gap-1" id="editMenuLoja"></div>
                         </div>
 
                         <div class="mb-3">
@@ -962,6 +1013,52 @@
         </div>
     </div>
 
+    <!-- MODAL: BAIXA / VALOR DA MENSALIDADE -->
+    <div class="modal fade" id="feeModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form id="feeForm" method="post">
+                    <div class="modal-header">
+                        <h5 class="modal-title fw-bold"><i class="bi bi-cash-coin me-2"></i>Mensalidade — <span
+                                id="feeModalName"></span></h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <label class="form-label fw-bold small">Valor mensal (R$)</label>
+                        <input type="number" step="0.01" min="0" name="amount" id="feeAmount"
+                            class="form-control mb-3" required>
+
+                        <label class="form-label fw-bold small d-block">Situação</label>
+                        <div class="form-check mb-1">
+                            <input class="form-check-input" type="radio" name="mode" id="feeModePendente"
+                                value="pendente">
+                            <label class="form-check-label" for="feeModePendente">Manter pendente</label>
+                        </div>
+                        <div class="form-check mb-1">
+                            <input class="form-check-input" type="radio" name="mode" id="feeModePago" value="pago">
+                            <label class="form-check-label" for="feeModePago">Pago (valor total)</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="mode" id="feeModeOutro" value="outro">
+                            <label class="form-check-label" for="feeModeOutro">Outro valor (pagamento
+                                parcial ou diferente)</label>
+                        </div>
+                        <div id="feePaidBox" class="ms-4">
+                            <label class="form-label small fw-bold">Valor pago (R$)</label>
+                            <input type="number" step="0.01" min="0" name="paid_amount" id="feePaid"
+                                class="form-control">
+                            <small id="feeHint" class="text-muted"></small>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary fw-bold">Salvar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL: CARDÁPIO / PREÇOS -->
     <div class="modal fade" id="menuModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-scrollable">
@@ -978,6 +1075,10 @@
                     <hr>
                     <label class="form-label fw-bold small">Adicionar item novo</label>
                     <div class="input-group">
+                        <select id="newMenuCat" class="form-select" style="max-width:105px;">
+                            <option value="Cantina">Cantina</option>
+                            <option value="Loja">Loja</option>
+                        </select>
                         <input type="text" id="newMenuName" class="form-control" placeholder="Nome">
                         <input type="number" step="0.01" min="0" id="newMenuPrice" class="form-control"
                             placeholder="Valor R$" style="max-width:120px;">
@@ -1008,7 +1109,8 @@
             modal.show();
         }
 
-        function addItemQuick(itemName, price) {
+        function addItemQuick(itemName, price, cat) {
+            noteCategoryLive(cat);
             var itemsInput = document.getElementById('live_raw_items');
             var amountInput = document.getElementById('live_total_amount');
 
@@ -1023,7 +1125,8 @@
             amountInput.value = newAmount.toFixed(2);
         }
 
-        function addItemQuickEdit(itemName, price) {
+        function addItemQuickEdit(itemName, price, cat) {
+            noteCategoryEdit(cat);
             var itemsInput = document.getElementById('editItems');
             var amountInput = document.getElementById('editAmount');
 
@@ -1047,6 +1150,8 @@
             document.getElementById('live_raw_items').value = '';
             document.getElementById('live_total_amount').value = '';
             document.getElementById('live_person_name').value = '';
+            orderCats = {};
+            document.getElementById('live_category').value = 'Cantina';
         }
 
         function goToCantinaTab() {
@@ -1076,8 +1181,10 @@
             }
         });
 
-        // ================= CARDÁPIO DINÂMICO =================
+        // ================= CARDÁPIO DINÂMICO (Cantina x Loja) =================
         var MENU = {{ menu_items|tojson }};
+        var liveCat = 'Cantina';
+        var orderCats = {};
 
         function brl(v) {
             return Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
@@ -1095,20 +1202,57 @@
             return r.json();
         }
 
-        function fillButtons(boxId, handler, small) {
+        // Origem automática: só Cantina, só Loja, ou os dois = "Cantina - Loja"
+        function noteCategoryLive(cat) {
+            if (!cat) return;
+            orderCats[cat] = true;
+            var keys = Object.keys(orderCats);
+            document.getElementById('live_category').value = keys.length > 1 ? 'Cantina - Loja' : keys[0];
+        }
+
+        function noteCategoryEdit(cat) {
+            if (!cat) return;
+            var sel = document.getElementById('editCategory');
+            if (sel.value !== cat && sel.value !== 'Cantina - Loja') sel.value = 'Cantina - Loja';
+        }
+
+        function setLiveCat(cat) {
+            liveCat = cat;
+            renderMenu();
+        }
+
+        function updateCatToggle() {
+            var c = document.getElementById('catBtnCantina');
+            var l = document.getElementById('catBtnLoja');
+            if (c) c.classList.toggle('active', liveCat === 'Cantina');
+            if (l) l.classList.toggle('active', liveCat === 'Loja');
+            var nm = document.getElementById('avulsoName');
+            if (nm) nm.placeholder = 'Novo item de ' + (liveCat === 'Loja' ? 'Loja (ex: Tintura)' : 'Cantina (ex: Pastel)');
+        }
+
+        function fillButtons(boxId, handler, small, cat) {
             var box = document.getElementById(boxId);
             if (!box) return;
             box.innerHTML = '';
-            MENU.forEach(function (it) {
+            var items = MENU.filter(function (m) { return m.category === cat; });
+            if (items.length === 0) {
+                var empty = document.createElement('small');
+                empty.className = 'text-muted';
+                empty.textContent = 'Nenhum item de ' + cat + ' ainda. Use "Item novo" ou "Gerenciar cardápio".';
+                box.appendChild(empty);
+                return;
+            }
+            items.forEach(function (it) {
                 var b = document.createElement('button');
                 b.type = 'button';
                 b.className = 'btn btn-sm btn-outline-dark fw-semibold bg-white' + (small ? ' py-1 px-2' : '');
+                if (cat === 'Loja') { b.style.borderColor = '#6f42c1'; b.style.color = '#6f42c1'; }
                 b.appendChild(document.createTextNode(it.name + ' '));
                 var s = document.createElement('span');
                 s.className = 'badge bg-success ms-1';
                 s.textContent = 'R$ ' + brl(it.price);
                 b.appendChild(s);
-                b.addEventListener('click', function () { handler(it.name, it.price); });
+                b.addEventListener('click', function () { handler(it.name, it.price, it.category); });
                 box.appendChild(b);
             });
         }
@@ -1117,53 +1261,79 @@
             var box = document.getElementById('menuList');
             if (!box) return;
             box.innerHTML = '';
-            MENU.forEach(function (it) {
-                var g = document.createElement('div');
-                g.className = 'input-group mb-2';
+            ['Cantina', 'Loja'].forEach(function (cat) {
+                var h = document.createElement('div');
+                h.className = 'fw-bold small mb-2 mt-2';
+                if (cat === 'Loja') h.style.color = '#6f42c1';
+                h.textContent = cat;
+                box.appendChild(h);
 
-                var n = document.createElement('input');
-                n.type = 'text'; n.className = 'form-control'; n.value = it.name;
+                var items = MENU.filter(function (m) { return m.category === cat; });
+                if (items.length === 0) {
+                    var e = document.createElement('div');
+                    e.className = 'text-muted small mb-2';
+                    e.textContent = 'Nenhum item.';
+                    box.appendChild(e);
+                }
+                items.forEach(function (it) {
+                    var g = document.createElement('div');
+                    g.className = 'input-group mb-2';
 
-                var p = document.createElement('input');
-                p.type = 'number'; p.step = '0.01'; p.min = '0';
-                p.className = 'form-control'; p.style.maxWidth = '110px'; p.value = it.price;
+                    var n = document.createElement('input');
+                    n.type = 'text'; n.className = 'form-control'; n.value = it.name;
 
-                var save = document.createElement('button');
-                save.type = 'button'; save.className = 'btn btn-outline-success';
-                save.title = 'Salvar'; save.innerHTML = '<i class="bi bi-check-lg"></i>';
-                save.addEventListener('click', async function () {
-                    try {
-                        var upd = await api('/menu-items/' + it.id + '/update', { name: n.value, price: p.value });
-                        MENU = MENU.map(function (m) { return m.id === upd.id ? upd : m; });
-                        renderMenu();
-                    } catch (e) { alert(e.message); }
+                    var p = document.createElement('input');
+                    p.type = 'number'; p.step = '0.01'; p.min = '0';
+                    p.className = 'form-control'; p.style.maxWidth = '100px'; p.value = it.price;
+
+                    var c = document.createElement('select');
+                    c.className = 'form-select'; c.style.maxWidth = '100px';
+                    ['Cantina', 'Loja'].forEach(function (o) {
+                        var op = document.createElement('option');
+                        op.value = o; op.textContent = o; if (o === it.category) op.selected = true;
+                        c.appendChild(op);
+                    });
+
+                    var save = document.createElement('button');
+                    save.type = 'button'; save.className = 'btn btn-outline-success';
+                    save.title = 'Salvar'; save.innerHTML = '<i class="bi bi-check-lg"></i>';
+                    save.addEventListener('click', async function () {
+                        try {
+                            var upd = await api('/menu-items/' + it.id + '/update',
+                                { name: n.value, price: p.value, category: c.value });
+                            MENU = MENU.map(function (m) { return m.id === upd.id ? upd : m; });
+                            renderMenu();
+                        } catch (err) { alert(err.message); }
+                    });
+
+                    var del = document.createElement('button');
+                    del.type = 'button'; del.className = 'btn btn-outline-danger';
+                    del.title = 'Remover do cardápio'; del.innerHTML = '<i class="bi bi-trash"></i>';
+                    del.addEventListener('click', async function () {
+                        if (!confirm('Remover "' + it.name + '" do cardápio?')) return;
+                        try {
+                            await api('/menu-items/' + it.id + '/delete');
+                            MENU = MENU.filter(function (m) { return m.id !== it.id; });
+                            renderMenu();
+                        } catch (err) { alert(err.message); }
+                    });
+
+                    g.appendChild(n); g.appendChild(p); g.appendChild(c); g.appendChild(save); g.appendChild(del);
+                    box.appendChild(g);
                 });
-
-                var del = document.createElement('button');
-                del.type = 'button'; del.className = 'btn btn-outline-danger';
-                del.title = 'Remover do cardápio'; del.innerHTML = '<i class="bi bi-trash"></i>';
-                del.addEventListener('click', async function () {
-                    if (!confirm('Remover "' + it.name + '" do cardápio?')) return;
-                    try {
-                        await api('/menu-items/' + it.id + '/delete');
-                        MENU = MENU.filter(function (m) { return m.id !== it.id; });
-                        renderMenu();
-                    } catch (e) { alert(e.message); }
-                });
-
-                g.appendChild(n); g.appendChild(p); g.appendChild(save); g.appendChild(del);
-                box.appendChild(g);
             });
         }
 
         function renderMenu() {
-            fillButtons('liveMenuButtons', addItemQuick, false);
-            fillButtons('editMenuButtons', addItemQuickEdit, true);
+            updateCatToggle();
+            fillButtons('liveMenuButtons', addItemQuick, false, liveCat);
+            fillButtons('editMenuCantina', addItemQuickEdit, true, 'Cantina');
+            fillButtons('editMenuLoja', addItemQuickEdit, true, 'Loja');
             renderMenuList();
         }
 
-        async function saveMenuItem(name, price) {
-            var it = await api('/menu-items', { name: name, price: price });
+        async function saveMenuItem(name, price, category) {
+            var it = await api('/menu-items', { name: name, price: price, category: category });
             var i = MENU.findIndex(function (m) { return m.id === it.id; });
             if (i >= 0) { MENU[i] = it; } else { MENU.push(it); }
             renderMenu();
@@ -1179,9 +1349,9 @@
                 alert('Informe o nome e o valor do item.');
                 return;
             }
-            addItemQuick(name, price);
+            addItemQuick(name, price, liveCat);
             if (document.getElementById('avulsoSave').checked) {
-                try { await saveMenuItem(name, price); } catch (e) { alert(e.message); }
+                try { await saveMenuItem(name, price, liveCat); } catch (e) { alert(e.message); }
             }
             nameEl.value = ''; priceEl.value = '';
             nameEl.focus();
@@ -1197,10 +1367,125 @@
                 return;
             }
             try {
-                await saveMenuItem(name, price);
+                await saveMenuItem(name, price, document.getElementById('newMenuCat').value);
                 nameEl.value = ''; priceEl.value = '';
             } catch (e) { alert(e.message); }
         }
+
+
+        // ================= MENSALIDADES: BAIXA / VALOR =================
+        function feeMode() {
+            var r = document.querySelector('#feeForm input[name="mode"]:checked');
+            return r ? r.value : 'pendente';
+        }
+
+        function feeRefresh() {
+            var mode = feeMode();
+            var paidEl = document.getElementById('feePaid');
+            var amount = parseFloat(document.getElementById('feeAmount').value) || 0;
+            paidEl.disabled = (mode !== 'outro');
+            document.getElementById('feePaidBox').style.opacity = (mode === 'outro') ? '1' : '0.45';
+            var hint = '';
+            if (mode === 'outro') {
+                var paid = parseFloat(paidEl.value) || 0;
+                hint = paid >= amount && amount > 0
+                    ? 'Esse valor quita a mensalidade.'
+                    : 'Ficará pendente: falta R$ ' + Math.max(amount - paid, 0).toFixed(2);
+            } else if (mode === 'pago') {
+                hint = 'Será registrado R$ ' + amount.toFixed(2) + ' como pago.';
+            }
+            document.getElementById('feeHint').textContent = hint;
+        }
+
+        function openFeeModal(item) {
+            document.getElementById('feeForm').action = '/monthly-fees/' + item.id + '/update';
+            document.getElementById('feeModalName').textContent = item.person_name;
+            document.getElementById('feeAmount').value = Number(item.amount).toFixed(2);
+            var mode = item.status === 'PAGO' ? 'pago' : (item.status === 'PARCIAL' ? 'outro' : 'pendente');
+            document.getElementById('feeMode' + mode.charAt(0).toUpperCase() + mode.slice(1)).checked = true;
+            document.getElementById('feePaid').value = item.paid > 0 ? Number(item.paid).toFixed(2) : '';
+            feeRefresh();
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('feeModal')).show();
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('#feeForm input').forEach(function (el) {
+                el.addEventListener('input', feeRefresh);
+                el.addEventListener('change', feeRefresh);
+            });
+        });
+
+        // ================= BLOQUEIO AUTOMÁTICO AO SAIR DA ABA =================
+        // Ao sair de uma área com senha, o acesso é encerrado (cookie apagado no servidor)
+        // e o conteúdo é escondido. Ao voltar, a senha é pedida de novo.
+        var LOCK_AREAS = {
+            fees: {
+                pairs: [['feesContent', 'feesRelock'], ['summaryContent', 'summaryRelock']],
+                logout: '/monthly-fees/logout',
+                visible: function () { return isPaneActive('pills-fees') || isPaneActive('pills-summary'); },
+                initialVisible: function () {
+                    return location.hash === '#pills-fees' || location.hash === '#pills-summary';
+                }
+            },
+            history: {
+                pairs: [['historyContent', 'historyRelock']],
+                logout: '/history/logout',
+                visible: function () { return isPaneActive('pills-cantina') && isPaneActive('sub-history'); },
+                initialVisible: function () {
+                    var saved = null;
+                    try { saved = localStorage.getItem('cantinaSubTab'); } catch (_) { }
+                    return (location.hash === '' || location.hash === '#pills-cantina') && saved === 'sub-history-tab';
+                }
+            }
+        };
+        var lockedAreas = {};
+
+        function isPaneActive(id) {
+            var el = document.getElementById(id);
+            return !!el && el.classList.contains('active');
+        }
+
+        function lockArea(key) {
+            var area = LOCK_AREAS[key];
+            var found = false;
+            area.pairs.forEach(function (p) {
+                var content = document.getElementById(p[0]);
+                var relock = document.getElementById(p[1]);
+                if (content && relock) {
+                    content.classList.add('d-none');
+                    relock.classList.remove('d-none');
+                    found = true;
+                }
+            });
+            if (!found || lockedAreas[key]) return;   // não estava liberada: nada a fazer
+            lockedAreas[key] = true;
+            try { fetch(area.logout, { method: 'POST', keepalive: true, redirect: 'manual' }); } catch (_) { }
+        }
+
+        document.addEventListener('shown.bs.tab', function () {
+            Object.keys(LOCK_AREAS).forEach(function (key) {
+                var area = LOCK_AREAS[key];
+                if (!area.visible()) {
+                    lockArea(key);
+                } else if (lockedAreas[key]) {
+                    area.pairs.forEach(function (p) {
+                        var relock = document.getElementById(p[1]);
+                        var pane = relock && relock.closest('.tab-pane');
+                        if (relock && pane && pane.classList.contains('active')) {
+                            var pin = relock.querySelector('input[name="pin"]');
+                            if (pin) pin.focus();
+                        }
+                    });
+                }
+            });
+        });
+
+        document.addEventListener('DOMContentLoaded', function () {
+            // Ao carregar a página, tudo que não estiver aberto na tela já nasce bloqueado
+            Object.keys(LOCK_AREAS).forEach(function (key) {
+                if (!LOCK_AREAS[key].initialVisible()) lockArea(key);
+            });
+        });
 
         // ================= SUB-ABAS E PASTAS (lembra onde você estava) =================
         document.addEventListener('DOMContentLoaded', function () {
