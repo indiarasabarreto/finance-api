@@ -78,6 +78,29 @@
 </head>
 
 <body class="bg-light">
+{% macro relock_card(box_id, action, title, on_submit='') %}
+<div id="{{ box_id }}" class="d-none">
+    <div class="row justify-content-center py-5">
+        <div class="col-md-5">
+            <div class="card border-0 shadow-sm text-center p-4">
+                <div class="mb-3"><i class="bi bi-shield-lock-fill text-primary display-3"></i></div>
+                <h4 class="fw-bold text-dark mb-2">{{ title }}</h4>
+                <p class="text-muted small mb-4">Por segurança, o acesso foi bloqueado ao sair desta aba.
+                    Digite a senha para continuar.</p>
+                <form action="{{ action }}" method="post" onsubmit="{{ on_submit }}">
+                    <div class="mb-3">
+                        <input type="password" name="pin" class="form-control form-control-lg text-center fw-bold"
+                            placeholder="Digite o PIN de Acesso" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-lg fw-bold w-100">
+                        <i class="bi bi-unlock me-1"></i> Liberar Acesso
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endmacro %}
 {% macro cons_row(item) %}
                                                     <tr>
                                                         <td class="fw-bold">{{ item.person_name }}</td>
@@ -183,7 +206,7 @@
                     <li class="nav-item" role="presentation">
                         <button class="nav-link active fw-bold me-2" id="sub-live-tab" data-bs-toggle="pill"
                             data-bs-target="#sub-live" type="button" role="tab">
-                            <i class="bi bi-lightning-charge-fill me-1"></i> Comanda ao Vivo
+                            <i class="bi bi-lightning-charge-fill me-1"></i> Comanda - Tempo Real
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
@@ -195,7 +218,7 @@
                 </ul>
 
                 <div class="tab-content" id="cantinaSubContent">
-            <!-- SUB-ABA: COMANDA AO VIVO (só o dia de trabalho) -->
+            <!-- SUB-ABA: COMANDA - TEMPO REAL (só o dia de trabalho) -->
             <div class="tab-pane fade show active" id="sub-live" role="tabpanel">
 
                 <div class="row g-3 mb-3">
@@ -219,11 +242,11 @@
                     </div>
                 </div>
 
-                <!-- Formulário Único de Comanda Ao Vivo -->
+                <!-- Formulário Único de Comanda - Tempo Real -->
                 <div class="card border-0 shadow-sm p-4 mb-4 no-print border-start border-4 border-success">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h5 class="card-title fw-bold text-success m-0">
-                            <i class="bi bi-plus-circle me-2"></i>Comanda Ao Vivo / Frente de Caixa
+                            <i class="bi bi-plus-circle me-2"></i>Comanda - Tempo Real / Frente de Caixa
                         </h5>
                         <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearLiveForm()">
                             <i class="bi bi-eraser me-1"></i> Limpar Formulário
@@ -404,12 +427,13 @@
                             </form>
                             <button type="button" class="btn btn-link text-secondary text-decoration-none fw-semibold"
                                 onclick="new bootstrap.Tab(document.getElementById('sub-live-tab')).show()">
-                                <i class="bi bi-arrow-left me-1"></i> Voltar para a Comanda ao Vivo
+                                <i class="bi bi-arrow-left me-1"></i> Voltar para a Comanda - Tempo Real
                             </button>
                         </div>
                     </div>
                 </div>
                 {% else %}
+                <div id="historyContent">
                 <div class="d-flex justify-content-between align-items-center mb-3 no-print">
                     <span class="badge bg-success px-3 py-2 fs-6"><i class="bi bi-shield-check me-1"></i> Acesso
                         Gestor Liberado</span>
@@ -611,6 +635,8 @@
                     {% endfor %}
                 </div>
                 {% endif %}
+                </div>
+                {{ relock_card('historyRelock', '/history/login', 'Área Restrita — Histórico', "try{localStorage.setItem('cantinaSubTab','sub-history-tab')}catch(e){}") }}
                 {% endif %}
 
             </div>
@@ -650,6 +676,7 @@
                     </div>
                 </div>
                 {% else %}
+                <div id="feesContent">
                 <!-- Conteúdo Liberado -->
                 <div class="d-flex justify-content-between align-items-center mb-3 no-print">
                     <div>
@@ -694,11 +721,16 @@
                         Folha
                         de Mensalidades do Mês</h5>
                     <form action="/monthly-fees/generate" method="post" class="row g-2">
-                        <div class="col-md-6">
+                        <div class="col-md-3">
+                            <input type="number" step="0.01" min="0" name="base_amount" class="form-control"
+                                value="90" title="Valor mensal por integrante (R$)"
+                                placeholder="Valor mensal (R$)" required>
+                        </div>
+                        <div class="col-md-4">
                             <input type="text" name="month_year" class="form-control"
                                 placeholder="Mês/Ano (Ex: 09/2026)" required>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-5">
                             <button type="submit" class="btn btn-primary fw-bold w-100">
                                 <i class="bi bi-plus-circle me-1"></i> Criar Folha de Mensalidades do Mês
                             </button>
@@ -741,7 +773,7 @@
                         </h2>
                         <div id="feeFolder{{ loop.index }}"
                             class="accordion-collapse collapse {% if loop.first %}show{% endif %}"
-                            data-bs-parent="#feesAccordion">
+                            data-month="{{ folder.month_year }}" data-bs-parent="#feesAccordion">
                             <div class="accordion-body bg-white pt-2">
                                 <div class="d-flex justify-content-end mb-3 no-print">
                                     <form action="/monthly-fees/delete-month" method="post"
@@ -755,54 +787,86 @@
                                     </form>
                                 </div>
 
-                                <div class="table-responsive">
-                                    <table class="table table-hover align-middle mb-0">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th>NOME DO MEMBRO</th>
-                                                <th>VALOR FIXO</th>
-                                                <th>SITUAÇÃO</th>
-                                                <th class="text-center no-print">AÇÃO</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {% for item in folder.fees %}
-                                            <tr>
-                                                <td class="fw-bold">{{ item.person_name }}</td>
-                                                <td class="fw-bold text-secondary">R$ {{ "%.2f"|format(item.amount)
-                                                    }}
-                                                </td>
-                                                <td>
-                                                    <span
-                                                        class="badge {% if item.status == 'PAGO' %}bg-success{% else %}bg-danger{% endif %}">
-                                                        {{ item.status }}
-                                                    </span>
-                                                </td>
-                                                <td class="text-center no-print">
-                                                    <form action="/monthly-fees/{{ item.id }}/pay" method="post"
-                                                        class="d-inline">
-                                                        <button type="submit"
-                                                            class="btn btn-sm {% if item.status == 'PAGO' %}btn-outline-warning{% else %}btn-success{% endif %} fw-bold">
-                                                            {% if item.status == 'PAGO' %}
-                                                            <i class="bi bi-arrow-counterclockwise"></i> Desfazer
-                                                            Baixa
-                                                            {% else %}
-                                                            <i class="bi bi-check-lg"></i> Dar Baixa (PAGO)
-                                                            {% endif %}
-                                                        </button>
-                                                    </form>
-                                                </td>
-                                            </tr>
-                                            {% endfor %}
-                                        </tbody>
-                                    </table>
-                                </div>
+                                <form action="/monthly-fees/bulk-update" method="post" class="fee-form">
+                                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 no-print">
+                                        <div class="btn-group btn-group-sm fee-filter" role="group" aria-label="Filtrar">
+                                            <button type="button" class="btn btn-outline-secondary active" data-filter="ALL">Todos</button>
+                                            <button type="button" class="btn btn-outline-danger" data-filter="PENDENTE">Pendentes</button>
+                                            <button type="button" class="btn btn-outline-warning" data-filter="PARCIAL">Parciais</button>
+                                            <button type="button" class="btn btn-outline-success" data-filter="PAGO">Pagos</button>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <small class="text-muted fee-dirty-msg"></small>
+                                            <button type="submit" class="btn btn-primary fw-bold fee-save-btn" disabled>
+                                                <i class="bi bi-save me-1"></i> Salvar alterações
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div class="table-responsive">
+                                        <table class="table table-hover align-middle mb-0">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>NOME DO MEMBRO</th>
+                                                    <th>VALOR MENSAL</th>
+                                                    <th>VALOR PAGO</th>
+                                                    <th>FALTA / A MAIS</th>
+                                                    <th>SITUAÇÃO</th>
+                                                    <th class="text-center no-print">ATALHOS</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for item in folder.fees %}
+                                                <tr class="fee-row" data-status="{{ item.status }}">
+                                                    <td class="fw-bold">{{ item.person_name }}</td>
+                                                    <td style="min-width:140px;">
+                                                        <div class="input-group input-group-sm">
+                                                            <span class="input-group-text">R$</span>
+                                                            <input type="number" step="0.01" min="0" class="form-control fee-amount"
+                                                                name="amount_{{ item.id }}" value="{{ '%.2f'|format(item.amount) }}"
+                                                                data-orig="{{ '%.2f'|format(item.amount) }}">
+                                                        </div>
+                                                    </td>
+                                                    <td style="min-width:140px;">
+                                                        <div class="input-group input-group-sm">
+                                                            <span class="input-group-text">R$</span>
+                                                            <input type="number" step="0.01" min="0" class="form-control fee-paid"
+                                                                name="paid_{{ item.id }}" placeholder="0.00"
+                                                                value="{% if item.paid > 0 %}{{ '%.2f'|format(item.paid) }}{% endif %}"
+                                                                data-orig="{% if item.paid > 0 %}{{ '%.2f'|format(item.paid) }}{% endif %}">
+                                                        </div>
+                                                    </td>
+                                                    <td class="fw-bold fee-balance text-nowrap"></td>
+                                                    <td class="fee-status"></td>
+                                                    <td class="text-center no-print text-nowrap">
+                                                        <button type="button" class="btn btn-sm btn-outline-success fee-total"
+                                                            title="Marcar como pago o valor total"><i class="bi bi-check-lg"></i> Total</button>
+                                                        <button type="button" class="btn btn-sm btn-outline-secondary fee-zero"
+                                                            title="Zerar o valor pago (pendente)"><i class="bi bi-x-lg"></i> Zerar</button>
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                            <tfoot class="table-light fw-bold">
+                                                <tr>
+                                                    <td>TOTAL</td>
+                                                    <td class="fee-sum-amount"></td>
+                                                    <td class="fee-sum-paid text-success"></td>
+                                                    <td class="fee-sum-remaining text-danger"></td>
+                                                    <td colspan="2"></td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                </form>
                             </div>
                         </div>
                     </div>
                     {% endfor %}
                 </div>
                 {% endif %}
+                </div>
+                {{ relock_card('feesRelock', '/monthly-fees/login', 'Área Restrita — Mensalidades') }}
                 {% endif %}
             </div>
 
@@ -839,6 +903,7 @@
                     </div>
                 </div>
                 {% else %}
+                <div id="summaryContent">
                 <!-- Conteúdo Liberado -->
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h4 class="fw-bold text-dark m-0"><i class="bi bi-graph-up-arrow text-primary me-2"></i>Resumo
@@ -889,6 +954,8 @@
                     </div>
                 </div>
                 {% endif %}
+                </div>
+                {{ relock_card('summaryRelock', '/monthly-fees/login', 'Área Restrita — Resumo') }}
                 {% endif %}
             </div>
         </div>
@@ -1285,6 +1352,186 @@
                 nameEl.value = ''; priceEl.value = '';
             } catch (e) { alert(e.message); }
         }
+
+
+        // ================= MENSALIDADES: EDIÇÃO EM LINHA =================
+        function feeNum(v) {
+            var n = parseFloat(String(v).replace(',', '.'));
+            return isNaN(n) ? 0 : n;
+        }
+        function feeMoney(v) { return 'R$ ' + v.toFixed(2); }
+
+        function feeRowRefresh(tr) {
+            var amountEl = tr.querySelector('.fee-amount');
+            var paidEl = tr.querySelector('.fee-paid');
+            var a = feeNum(amountEl.value), p = feeNum(paidEl.value);
+
+            var full = (p >= a - 0.005) && (p > 0 || a === 0);
+            var status = full ? 'PAGO' : (p > 0 ? 'PARCIAL' : 'PENDENTE');
+            tr.dataset.status = status;
+
+            var badge = status === 'PAGO' ? 'bg-success' : (status === 'PARCIAL' ? 'bg-warning text-dark' : 'bg-danger');
+            tr.querySelector('.fee-status').innerHTML = '<span class="badge ' + badge + '">' + status + '</span>';
+
+            var bal = tr.querySelector('.fee-balance');
+            if (p > a + 0.005) {
+                bal.className = 'fw-bold fee-balance text-nowrap text-success';
+                bal.textContent = '+ ' + feeMoney(p - a) + ' a mais';
+            } else {
+                var rem = Math.max(a - p, 0);
+                bal.className = 'fw-bold fee-balance text-nowrap ' + (rem > 0.005 ? 'text-danger' : 'text-muted');
+                bal.textContent = feeMoney(rem);
+            }
+
+            var dirty = Math.abs(a - feeNum(amountEl.dataset.orig)) > 0.0049 ||
+                        Math.abs(p - feeNum(paidEl.dataset.orig)) > 0.0049;
+            tr.classList.toggle('table-warning', dirty);
+            return dirty;
+        }
+
+        function feeFormRefresh(form) {
+            var dirtyCount = 0, sa = 0, sp = 0, sr = 0;
+            var filter = form.dataset.filter || 'ALL';
+            form.querySelectorAll('.fee-row').forEach(function (tr) {
+                if (feeRowRefresh(tr)) dirtyCount++;
+                var a = feeNum(tr.querySelector('.fee-amount').value);
+                var p = feeNum(tr.querySelector('.fee-paid').value);
+                sa += a; sp += p; sr += Math.max(a - p, 0);
+                tr.style.display = (filter === 'ALL' || tr.dataset.status === filter) ? '' : 'none';
+            });
+            var set = function (sel, v) { var el = form.querySelector(sel); if (el) el.textContent = feeMoney(v); };
+            set('.fee-sum-amount', sa); set('.fee-sum-paid', sp); set('.fee-sum-remaining', sr);
+            form.querySelector('.fee-save-btn').disabled = (dirtyCount === 0);
+            form.querySelector('.fee-dirty-msg').textContent = dirtyCount
+                ? dirtyCount + (dirtyCount === 1 ? ' alteração não salva' : ' alterações não salvas') : '';
+        }
+
+        function feeHasUnsaved() {
+            return Array.prototype.some.call(document.querySelectorAll('.fee-save-btn'), function (b) { return !b.disabled; });
+        }
+
+        document.addEventListener('input', function (ev) {
+            if (ev.target.classList && (ev.target.classList.contains('fee-amount') || ev.target.classList.contains('fee-paid'))) {
+                feeFormRefresh(ev.target.closest('form'));
+            }
+        });
+
+        document.addEventListener('click', function (ev) {
+            var btn = ev.target.closest ? ev.target.closest('.fee-total, .fee-zero, .fee-filter button') : null;
+            if (!btn) return;
+            var form = btn.closest('form');
+            if (btn.classList.contains('fee-total')) {
+                var tr = btn.closest('tr');
+                tr.querySelector('.fee-paid').value = feeNum(tr.querySelector('.fee-amount').value).toFixed(2);
+            } else if (btn.classList.contains('fee-zero')) {
+                btn.closest('tr').querySelector('.fee-paid').value = '';
+            } else {
+                form.dataset.filter = btn.dataset.filter;
+                form.querySelectorAll('.fee-filter button').forEach(function (b) { b.classList.toggle('active', b === btn); });
+            }
+            feeFormRefresh(form);
+        });
+
+        // Avisa antes de perder alterações não salvas
+        document.addEventListener('submit', function (ev) {
+            if (ev.target.classList && ev.target.classList.contains('fee-form')) window.__feeSubmitting = true;
+        });
+        window.addEventListener('beforeunload', function (ev) {
+            if (!window.__feeSubmitting && feeHasUnsaved()) { ev.preventDefault(); ev.returnValue = ''; }
+        });
+        document.addEventListener('hide.bs.tab', function (ev) {
+            var leaving = ev.target && ev.target.id;
+            var going = ev.relatedTarget && ev.relatedTarget.id;
+            if ((leaving === 'pills-fees-tab' && going !== 'pills-summary-tab') && feeHasUnsaved()) {
+                if (!confirm('Há alterações de mensalidades não salvas. Sair mesmo assim?')) ev.preventDefault();
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.fee-form').forEach(feeFormRefresh);
+            // lembra a pasta do mês aberta nas mensalidades
+            try {
+                var openFee = localStorage.getItem('openFeeFolder');
+                document.querySelectorAll('#feesAccordion .accordion-collapse').forEach(function (el) {
+                    if (openFee && el.dataset.month === openFee) new bootstrap.Collapse(el, { toggle: true });
+                    el.addEventListener('shown.bs.collapse', function (ev) {
+                        if (ev.target === el) localStorage.setItem('openFeeFolder', el.dataset.month);
+                    });
+                });
+            } catch (_) { }
+        });
+
+        // ================= BLOQUEIO AUTOMÁTICO AO SAIR DA ABA =================
+        // Ao sair de uma área com senha, o acesso é encerrado (cookie apagado no servidor)
+        // e o conteúdo é escondido. Ao voltar, a senha é pedida de novo.
+        var LOCK_AREAS = {
+            fees: {
+                pairs: [['feesContent', 'feesRelock'], ['summaryContent', 'summaryRelock']],
+                logout: '/monthly-fees/logout',
+                visible: function () { return isPaneActive('pills-fees') || isPaneActive('pills-summary'); },
+                initialVisible: function () {
+                    return location.hash === '#pills-fees' || location.hash === '#pills-summary';
+                }
+            },
+            history: {
+                pairs: [['historyContent', 'historyRelock']],
+                logout: '/history/logout',
+                visible: function () { return isPaneActive('pills-cantina') && isPaneActive('sub-history'); },
+                initialVisible: function () {
+                    var saved = null;
+                    try { saved = localStorage.getItem('cantinaSubTab'); } catch (_) { }
+                    return (location.hash === '' || location.hash === '#pills-cantina') && saved === 'sub-history-tab';
+                }
+            }
+        };
+        var lockedAreas = {};
+
+        function isPaneActive(id) {
+            var el = document.getElementById(id);
+            return !!el && el.classList.contains('active');
+        }
+
+        function lockArea(key) {
+            var area = LOCK_AREAS[key];
+            var found = false;
+            area.pairs.forEach(function (p) {
+                var content = document.getElementById(p[0]);
+                var relock = document.getElementById(p[1]);
+                if (content && relock) {
+                    content.classList.add('d-none');
+                    relock.classList.remove('d-none');
+                    found = true;
+                }
+            });
+            if (!found || lockedAreas[key]) return;   // não estava liberada: nada a fazer
+            lockedAreas[key] = true;
+            try { fetch(area.logout, { method: 'POST', keepalive: true, redirect: 'manual' }); } catch (_) { }
+        }
+
+        document.addEventListener('shown.bs.tab', function () {
+            Object.keys(LOCK_AREAS).forEach(function (key) {
+                var area = LOCK_AREAS[key];
+                if (!area.visible()) {
+                    lockArea(key);
+                } else if (lockedAreas[key]) {
+                    area.pairs.forEach(function (p) {
+                        var relock = document.getElementById(p[1]);
+                        var pane = relock && relock.closest('.tab-pane');
+                        if (relock && pane && pane.classList.contains('active')) {
+                            var pin = relock.querySelector('input[name="pin"]');
+                            if (pin) pin.focus();
+                        }
+                    });
+                }
+            });
+        });
+
+        document.addEventListener('DOMContentLoaded', function () {
+            // Ao carregar a página, tudo que não estiver aberto na tela já nasce bloqueado
+            Object.keys(LOCK_AREAS).forEach(function (key) {
+                if (!LOCK_AREAS[key].initialVisible()) lockArea(key);
+            });
+        });
 
         // ================= SUB-ABAS E PASTAS (lembra onde você estava) =================
         document.addEventListener('DOMContentLoaded', function () {
