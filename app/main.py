@@ -9,7 +9,7 @@ from urllib.parse import urlparse
 from fastapi import FastAPI, Depends, UploadFile, File, HTTPException, Request, Form, Cookie, Response
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import func
+from sqlalchemy import func, inspect, text
 from sqlalchemy.orm import Session
 
 from app.database import engine, Base, get_db, SessionLocal
@@ -31,6 +31,16 @@ DEFAULT_MENU = [
     ("Refrigerante", 5.0), ("Café", 5.0), ("Suco", 3.0),
 ]
 
+def ensure_menu_category_column():
+    """Banco já existente: adiciona a coluna 'category' no cardápio (itens atuais viram Cantina)."""
+    cols = [c["name"] for c in inspect(engine).get_columns("menu_items")]
+    if "category" not in cols:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE menu_items ADD COLUMN category VARCHAR(20) NOT NULL DEFAULT 'Cantina'"))
+
+def norm_category(value):
+    return "Loja" if value == "Loja" else "Cantina"
+
 def seed_menu():
     db = SessionLocal()
     try:
@@ -41,10 +51,11 @@ def seed_menu():
     finally:
         db.close()
 
+ensure_menu_category_column()
 seed_menu()
 
 def menu_item_dict(item):
-    return {"id": item.id, "name": item.name, "price": float(item.price)}
+    return {"id": item.id, "name": item.name, "price": float(item.price), "category": item.category or "Cantina"}
 
 def back_to_cantina(request: Request):
     """Volta para a mesma tela (e o mesmo dia) de onde o usuário veio."""
@@ -81,6 +92,7 @@ MEMBERS_CONFIG = [
     {"name": "Talles", "amount": 90.0},
     {"name": "Isadora", "amount": 90.0},
     {"name": "Suyá", "amount": 90.0},
+    {"name": "Ryan", "amount": 90.0},
     {"name": "Elaine (Bruno, Oxinho, Gabriel)", "amount": 360.0}  # R$ 90 x 4 integrantes
 ]
 
@@ -402,38 +414,44 @@ def add_direct_consumption(
 # --- CARDÁPIO (itens e preços da comanda ao vivo) ---
 
 @app.post("/menu-items")
-def add_menu_item(name: str = Form(...), price: float = Form(...), db: Session = Depends(get_db)):
+def add_menu_item(name: str = Form(...), price: float = Form(...), category: str = Form("Cantina"), db: Session = Depends(get_db)):
     name = name.strip()[:80]
+    category = norm_category(category)
     if not name or price < 0:
         raise HTTPException(status_code=400, detail="Informe um nome e um valor válidos.")
-    item = db.query(MenuItem).filter(func.lower(MenuItem.name) == name.lower()).first()
+    item = db.query(MenuItem).filter(
+        func.lower(MenuItem.name) == name.lower(), MenuItem.category == category
+    ).first()
     if item:
         # Já existe (ou foi removido antes): atualiza o preço e reativa
         item.price = price
         item.active = True
     else:
         last = db.query(func.max(MenuItem.sort_order)).scalar() or 0
-        item = MenuItem(name=name, price=price, sort_order=last + 1)
+        item = MenuItem(name=name, price=price, category=category, sort_order=last + 1)
         db.add(item)
     db.commit()
     db.refresh(item)
     return menu_item_dict(item)
 
 @app.post("/menu-items/{item_id}/update")
-def update_menu_item(item_id: int, name: str = Form(...), price: float = Form(...), db: Session = Depends(get_db)):
+def update_menu_item(item_id: int, name: str = Form(...), price: float = Form(...), category: str = Form("Cantina"), db: Session = Depends(get_db)):
     item = db.query(MenuItem).filter(MenuItem.id == item_id).first()
     name = name.strip()[:80]
+    category = norm_category(category)
     if not item:
         raise HTTPException(status_code=404, detail="Item não encontrado.")
     if not name or price < 0:
         raise HTTPException(status_code=400, detail="Informe um nome e um valor válidos.")
     clash = db.query(MenuItem).filter(
-        func.lower(MenuItem.name) == name.lower(), MenuItem.id != item_id, MenuItem.active == True
+        func.lower(MenuItem.name) == name.lower(), MenuItem.category == category,
+        MenuItem.id != item_id, MenuItem.active == True
     ).first()
     if clash:
         raise HTTPException(status_code=400, detail="Já existe um item com esse nome.")
     item.name = name
     item.price = price
+    item.category = category
     db.commit()
     return menu_item_dict(item)
 

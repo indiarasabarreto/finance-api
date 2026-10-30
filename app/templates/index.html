@@ -78,29 +78,6 @@
 </head>
 
 <body class="bg-light">
-{% macro relock_card(box_id, action, title, on_submit='') %}
-<div id="{{ box_id }}" class="d-none">
-    <div class="row justify-content-center py-5">
-        <div class="col-md-5">
-            <div class="card border-0 shadow-sm text-center p-4">
-                <div class="mb-3"><i class="bi bi-shield-lock-fill text-primary display-3"></i></div>
-                <h4 class="fw-bold text-dark mb-2">{{ title }}</h4>
-                <p class="text-muted small mb-4">Por segurança, o acesso foi bloqueado ao sair desta aba.
-                    Digite a senha para continuar.</p>
-                <form action="{{ action }}" method="post" onsubmit="{{ on_submit }}">
-                    <div class="mb-3">
-                        <input type="password" name="pin" class="form-control form-control-lg text-center fw-bold"
-                            placeholder="Digite o PIN de Acesso" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary btn-lg fw-bold w-100">
-                        <i class="bi bi-unlock me-1"></i> Liberar Acesso
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-{% endmacro %}
 {% macro cons_row(item) %}
                                                     <tr>
                                                         <td class="fw-bold">{{ item.person_name }}</td>
@@ -433,7 +410,6 @@
                     </div>
                 </div>
                 {% else %}
-                <div id="historyContent">
                 <div class="d-flex justify-content-between align-items-center mb-3 no-print">
                     <span class="badge bg-success px-3 py-2 fs-6"><i class="bi bi-shield-check me-1"></i> Acesso
                         Gestor Liberado</span>
@@ -635,8 +611,6 @@
                     {% endfor %}
                 </div>
                 {% endif %}
-                </div>
-                {{ relock_card('historyRelock', '/history/login', 'Área Restrita — Histórico', "try{localStorage.setItem('cantinaSubTab','sub-history-tab')}catch(e){}") }}
                 {% endif %}
 
             </div>
@@ -676,7 +650,6 @@
                     </div>
                 </div>
                 {% else %}
-                <div id="feesContent">
                 <!-- Conteúdo Liberado -->
                 <div class="d-flex justify-content-between align-items-center mb-3 no-print">
                     <div>
@@ -721,16 +694,11 @@
                         Folha
                         de Mensalidades do Mês</h5>
                     <form action="/monthly-fees/generate" method="post" class="row g-2">
-                        <div class="col-md-3">
-                            <input type="number" step="0.01" min="0" name="base_amount" class="form-control"
-                                value="90" title="Valor mensal por integrante (R$)"
-                                placeholder="Valor mensal (R$)" required>
-                        </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <input type="text" name="month_year" class="form-control"
                                 placeholder="Mês/Ano (Ex: 09/2026)" required>
                         </div>
-                        <div class="col-md-5">
+                        <div class="col-md-6">
                             <button type="submit" class="btn btn-primary fw-bold w-100">
                                 <i class="bi bi-plus-circle me-1"></i> Criar Folha de Mensalidades do Mês
                             </button>
@@ -792,9 +760,7 @@
                                         <thead class="table-light">
                                             <tr>
                                                 <th>NOME DO MEMBRO</th>
-                                                <th>VALOR MENSAL</th>
-                                                <th>PAGO</th>
-                                                <th>FALTA</th>
+                                                <th>VALOR FIXO</th>
                                                 <th>SITUAÇÃO</th>
                                                 <th class="text-center no-print">AÇÃO</th>
                                             </tr>
@@ -803,29 +769,28 @@
                                             {% for item in folder.fees %}
                                             <tr>
                                                 <td class="fw-bold">{{ item.person_name }}</td>
-                                                <td class="fw-bold text-secondary">R$ {{ "%.2f"|format(item.amount) }}</td>
-                                                <td class="fw-bold text-success">R$ {{ "%.2f"|format(item.paid) }}</td>
-                                                <td class="fw-bold {% if item.remaining > 0 %}text-danger{% else %}text-muted{% endif %}">R$ {{ "%.2f"|format(item.remaining) }}</td>
+                                                <td class="fw-bold text-secondary">R$ {{ "%.2f"|format(item.amount)
+                                                    }}
+                                                </td>
                                                 <td>
-                                                    <span class="badge {% if item.status == 'PAGO' %}bg-success{% elif item.status == 'PARCIAL' %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+                                                    <span
+                                                        class="badge {% if item.status == 'PAGO' %}bg-success{% else %}bg-danger{% endif %}">
                                                         {{ item.status }}
                                                     </span>
                                                 </td>
-                                                <td class="text-center no-print text-nowrap">
-                                                    <form action="/monthly-fees/{{ item.id }}/pay" method="post" class="d-inline">
+                                                <td class="text-center no-print">
+                                                    <form action="/monthly-fees/{{ item.id }}/pay" method="post"
+                                                        class="d-inline">
                                                         <button type="submit"
                                                             class="btn btn-sm {% if item.status == 'PAGO' %}btn-outline-warning{% else %}btn-success{% endif %} fw-bold">
                                                             {% if item.status == 'PAGO' %}
                                                             <i class="bi bi-arrow-counterclockwise"></i> Desfazer
+                                                            Baixa
                                                             {% else %}
-                                                            <i class="bi bi-check-lg"></i> Pago total
+                                                            <i class="bi bi-check-lg"></i> Dar Baixa (PAGO)
                                                             {% endif %}
                                                         </button>
                                                     </form>
-                                                    <button type="button" class="btn btn-sm btn-outline-primary fw-bold ms-1"
-                                                        onclick='openFeeModal({{ item|tojson }})'>
-                                                        <i class="bi bi-sliders"></i> Baixa / Valor
-                                                    </button>
                                                 </td>
                                             </tr>
                                             {% endfor %}
@@ -838,8 +803,6 @@
                     {% endfor %}
                 </div>
                 {% endif %}
-                </div>
-                {{ relock_card('feesRelock', '/monthly-fees/login', 'Área Restrita — Mensalidades') }}
                 {% endif %}
             </div>
 
@@ -876,7 +839,6 @@
                     </div>
                 </div>
                 {% else %}
-                <div id="summaryContent">
                 <!-- Conteúdo Liberado -->
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h4 class="fw-bold text-dark m-0"><i class="bi bi-graph-up-arrow text-primary me-2"></i>Resumo
@@ -927,8 +889,6 @@
                     </div>
                 </div>
                 {% endif %}
-                </div>
-                {{ relock_card('summaryRelock', '/monthly-fees/login', 'Área Restrita — Resumo') }}
                 {% endif %}
             </div>
         </div>
@@ -1007,52 +967,6 @@
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                         <button type="submit" class="btn btn-primary fw-bold">Salvar Alterações</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL: BAIXA / VALOR DA MENSALIDADE -->
-    <div class="modal fade" id="feeModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <form id="feeForm" method="post">
-                    <div class="modal-header">
-                        <h5 class="modal-title fw-bold"><i class="bi bi-cash-coin me-2"></i>Mensalidade — <span
-                                id="feeModalName"></span></h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <label class="form-label fw-bold small">Valor mensal (R$)</label>
-                        <input type="number" step="0.01" min="0" name="amount" id="feeAmount"
-                            class="form-control mb-3" required>
-
-                        <label class="form-label fw-bold small d-block">Situação</label>
-                        <div class="form-check mb-1">
-                            <input class="form-check-input" type="radio" name="mode" id="feeModePendente"
-                                value="pendente">
-                            <label class="form-check-label" for="feeModePendente">Manter pendente</label>
-                        </div>
-                        <div class="form-check mb-1">
-                            <input class="form-check-input" type="radio" name="mode" id="feeModePago" value="pago">
-                            <label class="form-check-label" for="feeModePago">Pago (valor total)</label>
-                        </div>
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="radio" name="mode" id="feeModeOutro" value="outro">
-                            <label class="form-check-label" for="feeModeOutro">Outro valor (pagamento
-                                parcial ou diferente)</label>
-                        </div>
-                        <div id="feePaidBox" class="ms-4">
-                            <label class="form-label small fw-bold">Valor pago (R$)</label>
-                            <input type="number" step="0.01" min="0" name="paid_amount" id="feePaid"
-                                class="form-control">
-                            <small id="feeHint" class="text-muted"></small>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-primary fw-bold">Salvar</button>
                     </div>
                 </form>
             </div>
@@ -1371,121 +1285,6 @@
                 nameEl.value = ''; priceEl.value = '';
             } catch (e) { alert(e.message); }
         }
-
-
-        // ================= MENSALIDADES: BAIXA / VALOR =================
-        function feeMode() {
-            var r = document.querySelector('#feeForm input[name="mode"]:checked');
-            return r ? r.value : 'pendente';
-        }
-
-        function feeRefresh() {
-            var mode = feeMode();
-            var paidEl = document.getElementById('feePaid');
-            var amount = parseFloat(document.getElementById('feeAmount').value) || 0;
-            paidEl.disabled = (mode !== 'outro');
-            document.getElementById('feePaidBox').style.opacity = (mode === 'outro') ? '1' : '0.45';
-            var hint = '';
-            if (mode === 'outro') {
-                var paid = parseFloat(paidEl.value) || 0;
-                hint = paid >= amount && amount > 0
-                    ? 'Esse valor quita a mensalidade.'
-                    : 'Ficará pendente: falta R$ ' + Math.max(amount - paid, 0).toFixed(2);
-            } else if (mode === 'pago') {
-                hint = 'Será registrado R$ ' + amount.toFixed(2) + ' como pago.';
-            }
-            document.getElementById('feeHint').textContent = hint;
-        }
-
-        function openFeeModal(item) {
-            document.getElementById('feeForm').action = '/monthly-fees/' + item.id + '/update';
-            document.getElementById('feeModalName').textContent = item.person_name;
-            document.getElementById('feeAmount').value = Number(item.amount).toFixed(2);
-            var mode = item.status === 'PAGO' ? 'pago' : (item.status === 'PARCIAL' ? 'outro' : 'pendente');
-            document.getElementById('feeMode' + mode.charAt(0).toUpperCase() + mode.slice(1)).checked = true;
-            document.getElementById('feePaid').value = item.paid > 0 ? Number(item.paid).toFixed(2) : '';
-            feeRefresh();
-            bootstrap.Modal.getOrCreateInstance(document.getElementById('feeModal')).show();
-        }
-
-        document.addEventListener('DOMContentLoaded', function () {
-            document.querySelectorAll('#feeForm input').forEach(function (el) {
-                el.addEventListener('input', feeRefresh);
-                el.addEventListener('change', feeRefresh);
-            });
-        });
-
-        // ================= BLOQUEIO AUTOMÁTICO AO SAIR DA ABA =================
-        // Ao sair de uma área com senha, o acesso é encerrado (cookie apagado no servidor)
-        // e o conteúdo é escondido. Ao voltar, a senha é pedida de novo.
-        var LOCK_AREAS = {
-            fees: {
-                pairs: [['feesContent', 'feesRelock'], ['summaryContent', 'summaryRelock']],
-                logout: '/monthly-fees/logout',
-                visible: function () { return isPaneActive('pills-fees') || isPaneActive('pills-summary'); },
-                initialVisible: function () {
-                    return location.hash === '#pills-fees' || location.hash === '#pills-summary';
-                }
-            },
-            history: {
-                pairs: [['historyContent', 'historyRelock']],
-                logout: '/history/logout',
-                visible: function () { return isPaneActive('pills-cantina') && isPaneActive('sub-history'); },
-                initialVisible: function () {
-                    var saved = null;
-                    try { saved = localStorage.getItem('cantinaSubTab'); } catch (_) { }
-                    return (location.hash === '' || location.hash === '#pills-cantina') && saved === 'sub-history-tab';
-                }
-            }
-        };
-        var lockedAreas = {};
-
-        function isPaneActive(id) {
-            var el = document.getElementById(id);
-            return !!el && el.classList.contains('active');
-        }
-
-        function lockArea(key) {
-            var area = LOCK_AREAS[key];
-            var found = false;
-            area.pairs.forEach(function (p) {
-                var content = document.getElementById(p[0]);
-                var relock = document.getElementById(p[1]);
-                if (content && relock) {
-                    content.classList.add('d-none');
-                    relock.classList.remove('d-none');
-                    found = true;
-                }
-            });
-            if (!found || lockedAreas[key]) return;   // não estava liberada: nada a fazer
-            lockedAreas[key] = true;
-            try { fetch(area.logout, { method: 'POST', keepalive: true, redirect: 'manual' }); } catch (_) { }
-        }
-
-        document.addEventListener('shown.bs.tab', function () {
-            Object.keys(LOCK_AREAS).forEach(function (key) {
-                var area = LOCK_AREAS[key];
-                if (!area.visible()) {
-                    lockArea(key);
-                } else if (lockedAreas[key]) {
-                    area.pairs.forEach(function (p) {
-                        var relock = document.getElementById(p[1]);
-                        var pane = relock && relock.closest('.tab-pane');
-                        if (relock && pane && pane.classList.contains('active')) {
-                            var pin = relock.querySelector('input[name="pin"]');
-                            if (pin) pin.focus();
-                        }
-                    });
-                }
-            });
-        });
-
-        document.addEventListener('DOMContentLoaded', function () {
-            // Ao carregar a página, tudo que não estiver aberto na tela já nasce bloqueado
-            Object.keys(LOCK_AREAS).forEach(function (key) {
-                if (!LOCK_AREAS[key].initialVisible()) lockArea(key);
-            });
-        });
 
         // ================= SUB-ABAS E PASTAS (lembra onde você estava) =================
         document.addEventListener('DOMContentLoaded', function () {
