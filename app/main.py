@@ -101,7 +101,8 @@ MEMBERS_CONFIG = [
     {"name": "Talles", "amount": 90.0},
     {"name": "Isadora", "amount": 90.0},
     {"name": "Suyá", "amount": 90.0},
-    {"name": "Ryan", "amount": 90.0},
+    {"name": "Paula", "amount": 90.0},
+    {"name": "Marco", "amount": 90.0},
     {"name": "Elaine (Bruno, Oxinho, Gabriel)", "amount": 360.0}  # R$ 90 x 4 integrantes
 ]
 
