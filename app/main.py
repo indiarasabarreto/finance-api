@@ -9,7 +9,7 @@ from urllib.parse import urlparse
 from fastapi import FastAPI, Depends, UploadFile, File, HTTPException, Request, Form, Cookie, Response
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import func
+from sqlalchemy import func, inspect, text
 from sqlalchemy.orm import Session
 
 from app.database import engine, Base, get_db, SessionLocal
@@ -31,6 +31,24 @@ DEFAULT_MENU = [
     ("Refrigerante", 5.0), ("Café", 5.0), ("Suco", 3.0),
 ]
 
+def ensure_menu_category_column():
+    """Banco já existente: adiciona a coluna 'category' no cardápio (itens atuais viram Cantina)."""
+    cols = [c["name"] for c in inspect(engine).get_columns("menu_items")]
+    if "category" not in cols:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE menu_items ADD COLUMN category VARCHAR(20) NOT NULL DEFAULT 'Cantina'"))
+
+def ensure_fee_paid_column():
+    """Banco já existente: cria 'paid_amount' nas mensalidades e converte as já pagas (PAGO = valor total)."""
+    cols = [c["name"] for c in inspect(engine).get_columns("monthly_fees")]
+    if "paid_amount" not in cols:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE monthly_fees ADD COLUMN paid_amount FLOAT NOT NULL DEFAULT 0"))
+            conn.execute(text("UPDATE monthly_fees SET paid_amount = amount WHERE status = 'PAID'"))
+
+def norm_category(value):
+    return "Loja" if value == "Loja" else "Cantina"
+
 def seed_menu():
     db = SessionLocal()
     try:
@@ -41,10 +59,12 @@ def seed_menu():
     finally:
         db.close()
 
+ensure_menu_category_column()
+ensure_fee_paid_column()
 seed_menu()
 
 def menu_item_dict(item):
-    return {"id": item.id, "name": item.name, "price": float(item.price)}
+    return {"id": item.id, "name": item.name, "price": float(item.price), "category": item.category or "Cantina"}
 
 def back_to_cantina(request: Request):
     """Volta para a mesma tela (e o mesmo dia) de onde o usuário veio."""
@@ -81,8 +101,8 @@ MEMBERS_CONFIG = [
     {"name": "Talles", "amount": 90.0},
     {"name": "Isadora", "amount": 90.0},
     {"name": "Suyá", "amount": 90.0},
-    {"name": "Ryan", "amount": 90.0},
-    {"name": "Elaine (Bruno, Oxinho, Gabriel)", "amount": 360.0}  # R$ 90 x 4 integrantes
+    {"name": "Paula Maria", "amount": 90.0},
+    {"name": "Elaine (Bruno, Oxinho)", "amount": 270.0}  # R$ 90 x 3 integrantes
 ]
 
 # --- AGRUPAMENTO POR DIA DE GIRA ---
@@ -225,20 +245,32 @@ def dashboard(
     fees_by_month = defaultdict(list)
 
     for fee in monthly_fees:
-        amount = float(fee.amount or 90.0)
-        fees_total_geral += amount
+        amount = float(fee.amount or 0.0)
+        paid = float(fee.paid_amount or 0.0)
         status_val = str(getattr(fee.status, 'value', fee.status)).upper()
+        if status_val == "PAGO" and paid <= 0:
+            paid = amount  # segurança para registros antigos
+        remaining = max(amount - paid, 0.0)
+
+        fees_total_geral += amount
+        fees_total_pago += paid
+        fees_total_pendente += remaining
 
         if status_val == "PAGO":
-            fees_total_pago += amount
+            situation = "PAGO"
+        elif paid > 0:
+            situation = "PARCIAL"
         else:
-            fees_total_pendente += amount
+            situation = "PENDENTE"
 
         fees_by_month[fee.month_year].append({
             "id": fee.id,
             "person_name": fee.person_name,
             "amount": amount,
-            "status": status_val
+            "paid": paid,
+            "remaining": remaining,
+            "extra": max(paid - amount, 0.0),
+            "status": situation
         })
 
     formatted_fee_folders = []
@@ -246,8 +278,8 @@ def dashboard(
 
     for month_year, fee_list in fees_by_month.items():
         f_total = sum(i["amount"] for i in fee_list)
-        f_pago = sum(i["amount"] for i in fee_list if i["status"] == "PAGO")
-        f_pendente = sum(i["amount"] for i in fee_list if i["status"] == "PENDENTE")
+        f_pago = sum(i["paid"] for i in fee_list)
+        f_pendente = sum(i["remaining"] for i in fee_list)
         fees_paid_by_month[month_year] = f_pago
 
         formatted_fee_folders.append({
@@ -403,38 +435,44 @@ def add_direct_consumption(
 # --- CARDÁPIO (itens e preços da comanda ao vivo) ---
 
 @app.post("/menu-items")
-def add_menu_item(name: str = Form(...), price: float = Form(...), db: Session = Depends(get_db)):
+def add_menu_item(name: str = Form(...), price: float = Form(...), category: str = Form("Cantina"), db: Session = Depends(get_db)):
     name = name.strip()[:80]
+    category = norm_category(category)
     if not name or price < 0:
         raise HTTPException(status_code=400, detail="Informe um nome e um valor válidos.")
-    item = db.query(MenuItem).filter(func.lower(MenuItem.name) == name.lower()).first()
+    item = db.query(MenuItem).filter(
+        func.lower(MenuItem.name) == name.lower(), MenuItem.category == category
+    ).first()
     if item:
         # Já existe (ou foi removido antes): atualiza o preço e reativa
         item.price = price
         item.active = True
     else:
         last = db.query(func.max(MenuItem.sort_order)).scalar() or 0
-        item = MenuItem(name=name, price=price, sort_order=last + 1)
+        item = MenuItem(name=name, price=price, category=category, sort_order=last + 1)
         db.add(item)
     db.commit()
     db.refresh(item)
     return menu_item_dict(item)
 
 @app.post("/menu-items/{item_id}/update")
-def update_menu_item(item_id: int, name: str = Form(...), price: float = Form(...), db: Session = Depends(get_db)):
+def update_menu_item(item_id: int, name: str = Form(...), price: float = Form(...), category: str = Form("Cantina"), db: Session = Depends(get_db)):
     item = db.query(MenuItem).filter(MenuItem.id == item_id).first()
     name = name.strip()[:80]
+    category = norm_category(category)
     if not item:
         raise HTTPException(status_code=404, detail="Item não encontrado.")
     if not name or price < 0:
         raise HTTPException(status_code=400, detail="Informe um nome e um valor válidos.")
     clash = db.query(MenuItem).filter(
-        func.lower(MenuItem.name) == name.lower(), MenuItem.id != item_id, MenuItem.active == True
+        func.lower(MenuItem.name) == name.lower(), MenuItem.category == category,
+        MenuItem.id != item_id, MenuItem.active == True
     ).first()
     if clash:
         raise HTTPException(status_code=400, detail="Já existe um item com esse nome.")
     item.name = name
     item.price = price
+    item.category = category
     db.commit()
     return menu_item_dict(item)
 
@@ -450,29 +488,167 @@ def delete_menu_item(item_id: int, db: Session = Depends(get_db)):
 # --- ROTAS MENSALIDADES ---
 
 @app.post("/monthly-fees/generate")
-def generate_monthly_fees(month_year: str = Form(...), db: Session = Depends(get_db)):
+def generate_monthly_fees(
+    month_year: str = Form(...),
+    base_amount: float | None = Form(None),
+    db: Session = Depends(get_db),
+):
     existing = db.query(MonthlyFee).filter(MonthlyFee.month_year == month_year).first()
     if existing:
         raise HTTPException(status_code=400, detail="A folha deste mês já existe.")
+    if base_amount is not None and base_amount < 0:
+        raise HTTPException(status_code=400, detail="Valor inválido.")
 
-    new_fees = [
-        MonthlyFee(
-            person_name=member["name"], 
-            month_year=month_year, 
-            amount=member["amount"], 
-            status=PaymentStatus.PENDING
-        )
-        for member in MEMBERS_CONFIG
-    ]
+    new_fees = []
+    for member in MEMBERS_CONFIG:
+        if base_amount is None:
+            amount = member["amount"]
+        else:
+            # Valor por integrante x quantidade de integrantes (ex.: Elaine = 4)
+            people = max(1, round(member["amount"] / 90.0))
+            amount = base_amount * people
+        new_fees.append(MonthlyFee(
+            person_name=member["name"],
+            month_year=month_year,
+            amount=amount,
+            paid_amount=0.0,
+            status=PaymentStatus.PENDING,
+        ))
     db.add_all(new_fees)
     db.commit()
     return RedirectResponse(url="/#pills-fees", status_code=303)
 
 @app.post("/monthly-fees/{fee_id}/pay")
 def pay_monthly_fee(fee_id: int, db: Session = Depends(get_db)):
+    # Atalho de 1 clique: pago total <-> pendente
     fee = db.query(MonthlyFee).filter(MonthlyFee.id == fee_id).first()
     if fee:
-        fee.status = PaymentStatus.PAID if fee.status == PaymentStatus.PENDING else PaymentStatus.PENDING
+        if fee.status == PaymentStatus.PENDING:
+            fee.status = PaymentStatus.PAID
+            fee.paid_amount = fee.amount
+        else:
+            fee.status = PaymentStatus.PENDING
+            fee.paid_amount = 0.0
+        db.commit()
+    return RedirectResponse(url="/#pills-fees", status_code=303)
+
+@app.post("/monthly-fees/bulk-update")
+async def bulk_update_monthly_fees(request: Request, db: Session = Depends(get_db)):
+    """Salva de uma vez os valores mensal e pago de vários membros (campos amount_<id> e paid_<id>)."""
+    form = await request.form()
+    ids = set()
+    for key in form.keys():
+        if key.startswith(("amount_", "paid_", "name_")):
+            try:
+                ids.add(int(key.split("_", 1)[1]))
+            except ValueError:
+                pass
+
+    def read_number(key, default):
+        if key not in form:
+            return default
+        raw = str(form.get(key, "")).strip().replace(",", ".")
+        if raw == "":
+            return 0.0 if key.startswith("paid_") else default
+        try:
+            value = float(raw)
+        except ValueError:
+            return default
+        return round(value, 2) if value >= 0 else default
+
+    if ids:
+        for fee in db.query(MonthlyFee).filter(MonthlyFee.id.in_(ids)).all():
+            amount = read_number(f"amount_{fee.id}", float(fee.amount or 0.0))
+            paid = read_number(f"paid_{fee.id}", float(fee.paid_amount or 0.0))
+            fee.amount = amount
+            fee.paid_amount = paid
+            if f"name_{fee.id}" in form:
+                new_name = " ".join(str(form.get(f"name_{fee.id}", "")).split())[:120]
+                if new_name:
+                    fee.person_name = new_name
+            # Pagou o valor (ou mais) = PAGO. Menos que isso = continua pendente (parcial).
+            fully_paid = paid >= amount - 0.005 and (paid > 0 or amount == 0)
+            fee.status = PaymentStatus.PAID if fully_paid else PaymentStatus.PENDING
+        db.commit()
+    return RedirectResponse(url="/#pills-fees", status_code=303)
+
+@app.post("/monthly-fees/add-member")
+def add_monthly_fee_member(
+    month_year: str = Form(...),
+    person_name: str = Form(...),
+    amount: float = Form(90.0),
+    db: Session = Depends(get_db),
+):
+    """Inclui um membro em uma folha de mensalidades que já existe."""
+    name = " ".join(person_name.split())[:120]
+    if not name or amount < 0:
+        raise HTTPException(status_code=400, detail="Informe o nome e um valor válido.")
+    duplicate = db.query(MonthlyFee).filter(
+        MonthlyFee.month_year == month_year,
+        func.lower(MonthlyFee.person_name) == name.lower(),
+    ).first()
+    if duplicate:
+        raise HTTPException(status_code=400, detail="Esse membro já está na folha deste mês.")
+    db.add(MonthlyFee(
+        person_name=name,
+        month_year=month_year,
+        amount=round(amount, 2),
+        paid_amount=0.0,
+        status=PaymentStatus.PENDING,
+    ))
+    db.commit()
+    return RedirectResponse(url="/#pills-fees", status_code=303)
+
+@app.post("/monthly-fees/{fee_id}/add-payment")
+def add_monthly_fee_payment(fee_id: int, amount: float = Form(...), db: Session = Depends(get_db)):
+    """Soma um pagamento (parcial ou total) ao que o membro já pagou no mês."""
+    fee = db.query(MonthlyFee).filter(MonthlyFee.id == fee_id).first()
+    if not fee:
+        raise HTTPException(status_code=404, detail="Registro não encontrado.")
+    if amount <= 0:
+        raise HTTPException(status_code=400, detail="Informe um valor maior que zero.")
+    paid = round(float(fee.paid_amount or 0.0) + amount, 2)
+    total = float(fee.amount or 0.0)
+    fee.paid_amount = paid
+    fee.status = PaymentStatus.PAID if paid >= total - 0.005 else PaymentStatus.PENDING
+    db.commit()
+    return RedirectResponse(url="/#pills-fees", status_code=303)
+
+@app.post("/monthly-fees/{fee_id}/update")
+def update_monthly_fee(
+    fee_id: int,
+    amount: float = Form(...),
+    mode: str = Form(...),
+    paid_amount: float = Form(0.0),
+    db: Session = Depends(get_db),
+):
+    """mode: 'pendente' (nada pago), 'pago' (valor total) ou 'outro' (valor pago informado)."""
+    fee = db.query(MonthlyFee).filter(MonthlyFee.id == fee_id).first()
+    if not fee:
+        raise HTTPException(status_code=404, detail="Registro não encontrado.")
+    if amount < 0 or paid_amount < 0:
+        raise HTTPException(status_code=400, detail="Valores não podem ser negativos.")
+
+    if mode == "pago":
+        paid = amount
+    elif mode == "outro":
+        paid = paid_amount
+    else:
+        paid = 0.0
+
+    fee.amount = amount
+    fee.paid_amount = paid
+    fully_paid = (mode == "pago") or (paid > 0 and paid >= amount - 0.005)
+    fee.status = PaymentStatus.PAID if fully_paid else PaymentStatus.PENDING
+    db.commit()
+    return RedirectResponse(url="/#pills-fees", status_code=303)
+
+@app.post("/monthly-fees/{fee_id}/delete")
+def delete_monthly_fee(fee_id: int, db: Session = Depends(get_db)):
+    """Remove um membro de uma folha de mensalidades (apenas aquele mês)."""
+    fee = db.query(MonthlyFee).filter(MonthlyFee.id == fee_id).first()
+    if fee:
+        db.delete(fee)
         db.commit()
     return RedirectResponse(url="/#pills-fees", status_code=303)
 
