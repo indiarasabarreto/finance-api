@@ -28,27 +28,46 @@
         @media print {
             body {
                 background-color: #fff !important;
-                font-size: 12pt;
-                /* Mantém as cores de fundo da tabela no PDF */
+                font-size: 11pt;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
             }
 
+            /* Ocultar elementos interativos e de navegação */
             .no-print,
-            form,
             .btn,
-            .input-group,
+            .input-group:not(.fee-form .input-group),
             select,
             .nav-pills,
             .accordion-button {
                 display: none !important;
             }
 
-            /* Garante que APENAS a aba ativa seja impressa */
-            .tab-content > .tab-pane:not(.active) {
+            /* CORREÇÃO 1: Ocultar formulários (como uploads e botões), MAS manter o da tabela de mensalidades */
+            form:not(.fee-form) {
                 display: none !important;
             }
 
+            /* CORREÇÃO 2: Forçar TODAS as abas a aparecerem juntas no PDF (Resumo Geral) */
+            .tab-content > .tab-pane {
+                display: block !important;
+                opacity: 1 !important;
+                visibility: visible !important;
+                height: auto !important;
+            }
+
+            /* Ocultar a Comanda de Tempo Real (mostrar apenas o histórico e os resumos mensais) */
+            #sub-live {
+                display: none !important;
+            }
+
+            /* Espaçamento entre os três blocos principais no PDF */
+            #pills-cantina, #pills-fees, #pills-summary {
+                margin-bottom: 30px !important;
+                padding-bottom: 20px !important;
+            }
+
+            /* Forçar as sanfonas de meses a ficarem abertas e visíveis */
             .accordion-collapse {
                 display: block !important;
                 opacity: 1 !important;
@@ -65,6 +84,7 @@
                 padding: 0 !important;
             }
 
+            /* Layout organizado para cartões de totais */
             .card,
             .accordion-item {
                 border: 1px solid #dee2e6 !important;
@@ -76,6 +96,7 @@
             .table {
                 border-collapse: collapse !important;
                 width: 100% !important;
+                margin-bottom: 30px !important;
             }
             
             .table th, .table td {
@@ -88,6 +109,7 @@
                 background-color: transparent !important;
             }
 
+            /* Cabeçalho do PDF */
             .print-only-header {
                 display: block !important;
                 text-align: center;
@@ -368,7 +390,7 @@
                             </select>
                         </div>
                         <div class="col-12 mt-3 text-end">
-                            <button type="submit" class="btn success fw-bold px-4">
+                            <button type="submit" class="btn btn-success fw-bold px-4">
                                 <i class="bi bi-check2-circle me-1"></i> Lançar na Comanda
                             </button>
                         </div>
