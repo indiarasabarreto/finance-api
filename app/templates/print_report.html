@@ -1,0 +1,356 @@
+{% macro chip(status) -%}
+<span class="chip chip-{{ status|lower }}">{{ status }}</span>
+{%- endmacro %}
+
+{% macro origem_tag(cat) -%}
+<span class="tag {{ 'tag-mista' if ('Loja' in cat and 'Cantina' in cat) else ('tag-loja' if cat == 'Loja' else 'tag-cantina') }}">{{ cat }}</span>
+{%- endmacro %}
+
+{% macro grupo_tag(g) -%}
+<span class="tag {{ 'tag-casa' if 'Filho' in g else 'tag-visit' }}">{{ g }}</span>
+{%- endmacro %}
+
+{% macro consumption_table(rows) -%}
+{% if rows %}
+<table class="data">
+  <thead>
+    <tr>
+      <th style="width:17%">Nome</th>
+      <th>Origem</th>
+      <th>Grupo</th>
+      <th>Itens consumidos</th>
+      <th class="num">Valor</th>
+      <th>Situação</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in rows %}
+    <tr>
+      <td class="name">{{ r.person_name }}</td>
+      <td>{{ origem_tag(r.category) }}</td>
+      <td>{{ grupo_tag(r.group) }}</td>
+      <td class="items">{{ r.raw_items|sem_data }}</td>
+      <td class="num strong">{{ r.total_amount|brl }}</td>
+      <td>{{ chip(r.status) }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+  <tfoot>
+    <tr>
+      <td colspan="4">Total ({{ rows|length }} lançamento{{ "" if rows|length == 1 else "s" }})</td>
+      <td class="num">{{ rows|sum(attribute="total_amount")|brl }}</td>
+      <td></td>
+    </tr>
+  </tfoot>
+</table>
+{% else %}
+<p class="empty">Nenhum lançamento encontrado.</p>
+{% endif %}
+{%- endmacro %}
+<!doctype html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ report_title or "Relatório" }} — Controle Financeiro</title>
+  <style>
+    :root {
+      --ink: #1c2333; --muted: #6b7385; --line: #e3e7ef; --soft: #f4f6fb;
+      --blue: #0d6efd; --green: #188a57; --amber: #b7791f; --red: #c0392b;
+    }
+    * { box-sizing: border-box; }
+    @page { size: A4; margin: 0; }
+    html, body {
+      margin: 0; background: #e9edf3; color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 10.5pt; line-height: 1.35;
+      -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    }
+
+    /* ---------- barra da tela (não imprime) ---------- */
+    .toolbar {
+      align-items: center; background: #1c2333; color: #fff; display: flex; gap: .75rem;
+      justify-content: space-between; padding: .7rem 1.1rem; position: sticky; top: 0; z-index: 10;
+    }
+    .toolbar strong { font-size: .95rem; }
+    .toolbar a, .toolbar button {
+      border: 1px solid rgba(255,255,255,.45); border-radius: .5rem; color: #fff; cursor: pointer;
+      font: inherit; font-size: .88rem; font-weight: 600; padding: .45rem .9rem; text-decoration: none; background: transparent;
+    }
+    .toolbar button.primary { background: var(--blue); border-color: var(--blue); }
+
+    /* ---------- folha A4 ---------- */
+    .sheet { background: #fff; box-shadow: 0 .5rem 2rem rgba(20,30,50,.18); margin: 1.2rem auto 2rem; max-width: 100%; width: 210mm; }
+    .frame { border-collapse: collapse; width: 100%; }
+    .frame > tbody > tr > td { padding: 12mm 14mm 6mm; vertical-align: top; }
+    .frame > thead > tr > td, .frame > tfoot > tr > td { padding: 0; }
+    .space-top, .space-bottom { height: 0; }
+
+    .page-footer {
+      border-top: .25mm solid var(--line); color: var(--muted); display: flex; font-size: 7.8pt;
+      justify-content: space-between; margin: 0 14mm; padding: 2.5mm 0 8mm;
+    }
+
+    /* ---------- cabeçalho do relatório ---------- */
+    .rp-header { align-items: center; border-bottom: .6mm solid var(--ink); display: flex; justify-content: space-between; padding-bottom: 4mm; }
+    .rp-brand { align-items: center; display: flex; gap: 3.5mm; }
+    .rp-mark {
+      align-items: center; background: var(--ink); border-radius: 2.2mm; color: #fff; display: flex;
+      font-size: 13pt; font-weight: 800; height: 11mm; justify-content: center; letter-spacing: .02em; width: 11mm;
+    }
+    .rp-org { font-size: 14pt; font-weight: 800; letter-spacing: -.01em; }
+    .rp-org-sub { color: var(--muted); font-size: 8.3pt; }
+    .rp-meta { color: var(--muted); font-size: 8pt; text-align: right; }
+    .rp-meta strong { color: var(--ink); display: block; font-size: 9pt; }
+
+    h1.rp-title { font-size: 19pt; letter-spacing: -.015em; margin: 6mm 0 0; }
+    .rp-subtitle { color: var(--muted); font-size: 10.5pt; margin: 1mm 0 0; }
+
+    /* ---------- indicadores ---------- */
+    .kpis { display: grid; gap: 3.5mm; grid-template-columns: repeat(3, 1fr); margin: 6mm 0 2mm; }
+    .kpi { background: var(--soft); border-radius: 2.2mm; border-top: 1.3mm solid var(--blue); padding: 3mm 3.5mm; }
+    .kpi.green { border-top-color: var(--green); }
+    .kpi.amber { border-top-color: var(--amber); }
+    .kpi.red { border-top-color: var(--red); }
+    .kpi small { color: var(--muted); display: block; font-size: 7.4pt; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+    .kpi strong { display: block; font-size: 15pt; font-variant-numeric: tabular-nums; letter-spacing: -.01em; margin-top: .6mm; }
+    .kpi span { color: var(--muted); font-size: 7.8pt; }
+
+    /* ---------- seções e tabelas ---------- */
+    .section { margin-top: 6.5mm; }
+    .section-head {
+      align-items: baseline; background: var(--soft); border-left: 1.4mm solid var(--blue); break-after: avoid;
+      display: flex; gap: 4mm; justify-content: space-between; margin-bottom: 2.5mm; padding: 1.8mm 3.5mm;
+    }
+    .section-head h2 { font-size: 11.5pt; margin: 0; }
+    .section-head .mini { color: var(--muted); font-size: 8.3pt; text-align: right; }
+    .section-head .mini b { color: var(--ink); font-variant-numeric: tabular-nums; }
+
+    table.data { border-collapse: collapse; font-size: 9.4pt; width: 100%; }
+    table.data thead { display: table-header-group; }
+    table.data tfoot { display: table-row-group; }
+    table.data th {
+      background: var(--soft); border-bottom: .35mm solid #c9d1e0; color: var(--muted); font-size: 7.6pt;
+      letter-spacing: .07em; padding: 2mm 2.2mm; text-align: left; text-transform: uppercase;
+    }
+    table.data td { border-bottom: .2mm solid var(--line); padding: 2mm 2.2mm; vertical-align: top; }
+    table.data tbody tr:nth-child(even) td { background: #fafbfe; }
+    table.data tr { break-inside: avoid; page-break-inside: avoid; }
+    table.data tfoot td { background: var(--soft); border-bottom: 0; border-top: .35mm solid #c9d1e0; font-weight: 800; padding: 2.4mm 2.2mm; }
+    .num { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+    th.num { text-align: right; }
+    .name, .strong { font-weight: 700; }
+    .items { color: #3b4358; }
+    .pos { color: var(--green); font-weight: 700; }
+    .neg { color: var(--red); font-weight: 700; }
+    .dim { color: var(--muted); }
+
+    .tag { border: .25mm solid #c4cbd9; border-radius: 99px; display: inline-block; font-size: 7.4pt; font-weight: 700; padding: .3mm 2mm; white-space: nowrap; }
+    .tag-cantina { background: #1c2333; border-color: #1c2333; color: #fff; }
+    .tag-loja { background: #efe6fb; border-color: #cdb6ef; color: #5b2ea6; }
+    .tag-mista { background: #e3eeff; border-color: #b6d0fb; color: #0b4fb8; }
+    .tag-casa { background: #dff5fa; border-color: #a9e0ec; color: #0a6b80; }
+    .tag-visit { background: #eceff4; border-color: #d3d9e4; color: #4a5367; }
+
+    .chip { border-radius: 99px; display: inline-block; font-size: 7.4pt; font-weight: 800; letter-spacing: .04em; padding: .5mm 2.4mm; white-space: nowrap; }
+    .chip-pago { background: #dcf3e6; color: #137a49; }
+    .chip-pendente { background: #fdecc8; color: #8a5a00; }
+    .chip-parcial { background: #ffe1c9; color: #a14a00; }
+
+    .empty { color: var(--muted); padding: 6mm 0; text-align: center; }
+    .note { color: var(--muted); font-size: 8pt; margin-top: 4mm; }
+
+    /* ---------- acesso restrito ---------- */
+    .restricted { margin: 18mm auto; max-width: 120mm; text-align: center; }
+    .restricted svg { height: 18mm; width: 18mm; }
+    .restricted h1 { font-size: 16pt; margin: 4mm 0 2mm; }
+    .restricted p { color: var(--muted); }
+
+    @media print {
+      html, body { background: #fff; }
+      .toolbar { display: none !important; }
+      .sheet { box-shadow: none; margin: 0; max-width: none; width: auto; }
+      .frame > tbody > tr > td { padding: 0 14mm; }
+      .space-top { height: 12mm; }
+      .space-bottom { height: 16mm; }
+      .page-footer { bottom: 0; left: 0; margin: 0 14mm; position: fixed; right: 0; padding-bottom: 7mm; background: #fff; }
+    }
+    @media (max-width: 800px) { .sheet { width: 100%; } }
+  </style>
+</head>
+
+<body>
+  <div class="toolbar">
+    <a href="/">← Voltar ao sistema</a>
+    <strong>{{ report_title or "Relatório" }}</strong>
+    {% if not restricted %}
+    <button type="button" class="primary" onclick="window.print()">Imprimir / Salvar PDF</button>
+    {% else %}
+    <span></span>
+    {% endif %}
+  </div>
+
+  <div class="sheet">
+    <table class="frame">
+      <thead><tr><td><div class="space-top"></div></td></tr></thead>
+      <tfoot><tr><td><div class="space-bottom"></div></td></tr></tfoot>
+      <tbody>
+        <tr>
+          <td>
+            <header class="rp-header">
+              <div class="rp-brand">
+                <div class="rp-mark">CF</div>
+                <div>
+                  <div class="rp-org">Controle Financeiro</div>
+                  <div class="rp-org-sub">Terreiro · Mensalidades e eventos da casa</div>
+                </div>
+              </div>
+              <div class="rp-meta">Gerado em<strong>{{ generated_at }}</strong></div>
+            </header>
+
+            {% if restricted %}
+            <div class="restricted">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#0d6efd" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="4" y="10.5" width="16" height="10" rx="2.5"></rect>
+                <path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"></path>
+                <circle cx="12" cy="15.5" r="1.2"></circle>
+              </svg>
+              <h1>Conteúdo restrito</h1>
+              <p>Este relatório faz parte da área <strong>{{ restricted }}</strong>. Volte ao sistema, libere o acesso
+                com a senha e peça a impressão novamente.</p>
+            </div>
+            {% else %}
+
+            <h1 class="rp-title">{{ report_title }}</h1>
+            {% if report_subtitle %}<p class="rp-subtitle">{{ report_subtitle }}</p>{% endif %}
+
+            {% if kpis %}
+            <div class="kpis">
+              {% for k in kpis %}
+              <div class="kpi {{ k.tone }}">
+                <small>{{ k.label }}</small>
+                <strong>{{ k.value }}</strong>
+                {% if k.hint %}<span>{{ k.hint }}</span>{% endif %}
+              </div>
+              {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if kind == "consumptions" %}
+              {% for s in sections %}
+              <section class="section">
+                {% if s.title %}
+                <div class="section-head">
+                  <h2>{{ s.title }}</h2>
+                  {% if s.mini %}
+                  <div class="mini">
+                    {% for m in s.mini %}{{ m.label }}: <b>{{ m.value|brl }}</b>{% if not loop.last %} &nbsp;·&nbsp; {% endif %}{% endfor %}
+                  </div>
+                  {% endif %}
+                </div>
+                {% endif %}
+                {{ consumption_table(s.rows) }}
+              </section>
+              {% endfor %}
+
+            {% elif kind == "fees" %}
+              <section class="section">
+                {% if rows %}
+                <table class="data">
+                  <thead>
+                    <tr>
+                      <th>Nome do membro</th>
+                      <th class="num">Valor mensal</th>
+                      <th class="num">Valor pago</th>
+                      <th class="num">Falta / a mais</th>
+                      <th>Situação</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for r in rows %}
+                    <tr>
+                      <td class="name">{{ r.person_name }}</td>
+                      <td class="num">{{ r.amount|brl }}</td>
+                      <td class="num strong">{{ r.paid|brl }}</td>
+                      <td class="num">
+                        {% if r.extra > 0.005 %}<span class="pos">+ {{ r.extra|brl }} a mais</span>
+                        {% elif r.remaining > 0.005 %}<span class="neg">{{ r.remaining|brl }}</span>
+                        {% else %}<span class="dim">—</span>{% endif %}
+                      </td>
+                      <td>{{ chip(r.status) }}</td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td>Total ({{ rows|length }} membros)</td>
+                      <td class="num">{{ rows|sum(attribute="amount")|brl }}</td>
+                      <td class="num">{{ rows|sum(attribute="paid")|brl }}</td>
+                      <td class="num">{{ rows|sum(attribute="remaining")|brl }}</td>
+                      <td></td>
+                    </tr>
+                  </tfoot>
+                </table>
+                {% else %}
+                <p class="empty">Nenhuma mensalidade encontrada neste mês.</p>
+                {% endif %}
+              </section>
+
+            {% elif kind == "summary" %}
+              <section class="section">
+                {% if rows %}
+                <table class="data">
+                  <thead>
+                    <tr>
+                      <th>Mês</th>
+                      <th class="num">Cantina e Loja (recebido)</th>
+                      <th class="num">Mensalidades (recebido)</th>
+                      <th class="num">Total do mês</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for r in rows %}
+                    <tr>
+                      <td class="name">{{ r.month_title }} <span class="dim">· {{ r.month_year }}</span></td>
+                      <td class="num">{{ r.cantina|brl }}</td>
+                      <td class="num">{{ r.fees|brl }}</td>
+                      <td class="num strong">{{ r.total|brl }}</td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td>Total geral</td>
+                      <td class="num">{{ rows|sum(attribute="cantina")|brl }}</td>
+                      <td class="num">{{ rows|sum(attribute="fees")|brl }}</td>
+                      <td class="num">{{ rows|sum(attribute="total")|brl }}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+                <p class="note">Considera apenas valores já recebidos (pagos).</p>
+                {% else %}
+                <p class="empty">Ainda não há movimentação registrada.</p>
+                {% endif %}
+              </section>
+            {% endif %}
+            {% endif %}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="page-footer">
+      <span>Controle Financeiro · Terreiro</span>
+      <span>{{ report_title }}{% if report_subtitle %} — {{ report_subtitle }}{% endif %} · gerado em {{ generated_at }}</span>
+    </div>
+  </div>
+
+  {% if not restricted %}
+  <script>
+    window.addEventListener('load', function () { setTimeout(function () { window.print(); }, 500); });
+  </script>
+  {% endif %}
+</body>
+
+</html>
