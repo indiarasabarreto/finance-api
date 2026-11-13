@@ -52,7 +52,8 @@ class MonthlyFee(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     person_name: Mapped[str] = mapped_column(String(120), nullable=False)
     month_year: Mapped[str] = mapped_column(String(20), nullable=False)
-    amount: Mapped[float] = mapped_column(Float, default=90.0)
+    amount: Mapped[float] = mapped_column(Float, default=90.0)  # valor mensal (editável por mês/pessoa)
+    paid_amount: Mapped[float] = mapped_column(Float, default=0.0, server_default="0")  # quanto já foi pago
     status: Mapped[PaymentStatus] = mapped_column(SQLEnum(PaymentStatus), default=PaymentStatus.PENDING)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
 
@@ -63,6 +64,7 @@ class MenuItem(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(80), nullable=False)
     price: Mapped[float] = mapped_column(Float, nullable=False)
+    category: Mapped[str] = mapped_column(String(20), default="Cantina", server_default="Cantina")
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
